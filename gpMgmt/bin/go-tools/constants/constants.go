@@ -31,4 +31,6 @@ const (
 // Catalog tables
 const (
 	GpSegmentConfiguration = "gp_segment_configuration"
+	GroupMirroringStr   = "group"
+	SpreadMirroringStr  = "spread"
 )
