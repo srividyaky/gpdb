@@ -192,6 +192,10 @@ func TestInputFileValidation(t *testing.T) {
 		primarySegs := config.Get("segment-array")
 		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
 
+		// Backup original primary data directories
+		originalPrimaryDD1 := valueSegPair[0].Primary.DataDirectory
+		originalPrimaryDD2 := valueSegPair[1].Primary.DataDirectory
+
 		if !ok {
 			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
 		} else {
@@ -211,6 +215,28 @@ func TestInputFileValidation(t *testing.T) {
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Errorf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
+
+		// Restore original primary data directories
+		valueSegPair[0].Primary.DataDirectory = originalPrimaryDD1
+		valueSegPair[1].Primary.DataDirectory = originalPrimaryDD2
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		// Validation for mirror segments
+		valueSegPair[1].Mirror.Hostname = valueSegPair[0].Mirror.Hostname
+		valueSegPair[1].Mirror.Address = valueSegPair[0].Mirror.Address
+		valueSegPair[0].Mirror.DataDirectory = "gpseg1"
+		valueSegPair[1].Mirror.DataDirectory = "gpseg1"
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		resultMirror, errMirror := testutils.RunInitCluster(configFile)
+		if e, ok := errMirror.(*exec.ExitError); !ok || e.ExitCode() != 1 {
+			t.Fatalf("got %v, want exit status 1", errMirror)
+		}
+
+		expectedOutMirror := fmt.Sprintf("[ERROR]:-duplicate data directory entry gpseg1 found for host %s", valueSegPair[0].Mirror.Hostname)
+		if !strings.Contains(resultMirror.OutputMsg, expectedOutMirror) {
+			t.Errorf("got %q, want %q", resultMirror.OutputMsg, expectedOutMirror)
+		}
 	})
 
 	t.Run("when same port is given for a host address", func(t *testing.T) {
@@ -220,6 +246,10 @@ func TestInputFileValidation(t *testing.T) {
 
 		primarySegs := config.Get("segment-array")
 		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+
+		// Restore original primary ports
+		originalPrimaryPort1 := valueSegPair[0].Primary.Port
+		originalPrimaryPort2 := valueSegPair[1].Primary.Port
 
 		if !ok {
 			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
@@ -240,13 +270,34 @@ func TestInputFileValidation(t *testing.T) {
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Errorf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
+
+		// Restore original primary port values
+		valueSegPair[0].Primary.Port = originalPrimaryPort1
+		valueSegPair[1].Primary.Port = originalPrimaryPort2
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		// validate for mirror segments
+		valueSegPair[1].Mirror.Hostname = valueSegPair[0].Mirror.Hostname
+		valueSegPair[1].Mirror.Address = valueSegPair[0].Mirror.Address
+		valueSegPair[0].Mirror.Port = 1234
+		valueSegPair[1].Mirror.Port = 1234
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		resultMirror, errMirror := testutils.RunInitCluster(configFile)
+		if e, ok := errMirror.(*exec.ExitError); !ok || e.ExitCode() != 1 {
+			t.Fatalf("got %v, want exit status 1", errMirror)
+		}
+
+		expectedOutMirror := fmt.Sprintf("[ERROR]:-duplicate port entry 1234 found for host %s", valueSegPair[1].Mirror.Hostname)
+		if !strings.Contains(resultMirror.OutputMsg, expectedOutMirror) {
+			t.Errorf("got %q, want %q", resultMirror.OutputMsg, expectedOutMirror)
+		}
 	})
 
 	t.Run("when empty data directory is given for a host", func(t *testing.T) {
 		var ok bool
 		configFile := testutils.GetTempFile(t, "config.json")
 		config := GetDefaultConfig(t)
-
 		primarySegs := config.Get("segment-array")
 		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
 
@@ -266,6 +317,25 @@ func TestInputFileValidation(t *testing.T) {
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Errorf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
+
+		// Restore primary data directory
+		valueSegPair[0].Primary.DataDirectory = "gpseg1"
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		valueSegPair[0].Mirror.DataDirectory = ""
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		resultMirror, errMirror := testutils.RunInitCluster(configFile)
+		if e, ok := errMirror.(*exec.ExitError); !ok || e.ExitCode() != 1 {
+			t.Fatalf("got %v, want exit status 1", errMirror)
+		}
+
+		// Validation for mirror segments
+		expectedOutMirror := fmt.Sprintf("[ERROR]:-data_directory has not been provided for segment with hostname %s and port %d", valueSegPair[0].Mirror.Hostname, valueSegPair[0].Mirror.Port)
+		if !strings.Contains(resultMirror.OutputMsg, expectedOutMirror) {
+			t.Errorf("got %q, want %q", resultMirror.OutputMsg, expectedOutMirror)
+		}
+
 	})
 
 	t.Run("when host address is not provided", func(t *testing.T) {
@@ -299,6 +369,61 @@ func TestInputFileValidation(t *testing.T) {
 
 	})
 
+	t.Run("when hostaddress is empty for segments", func(t *testing.T) {
+		var ok bool
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultConfig(t)
+
+		primarySegs := config.Get("segment-array")
+		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+
+		originalPrimaryAddress := valueSegPair[0].Primary.Address
+
+		if !ok {
+			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
+		} else {
+			valueSegPair[0].Primary.Address = ""
+			SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+		}
+
+		result, err := testutils.RunInitCluster(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
+		}
+
+		expectedOut := fmt.Sprintf("[WARNING]:-hostAddress has not been provided, populating it with same as hostName %s for the segment with port %d and data_directory %s", valueSegPair[0].Primary.Hostname, valueSegPair[0].Primary.Port, valueSegPair[0].Primary.DataDirectory)
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Errorf("got %q, want %q", result.OutputMsg, expectedOut)
+		}
+
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		valueSegPair[0].Primary.Address = originalPrimaryAddress
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		// validation for mirror segments
+		valueSegPair[0].Mirror.Address = ""
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		resultMirror, errMirror := testutils.RunInitCluster(configFile)
+		if errMirror != nil {
+			t.Fatalf("unexpected error: %s, %v", resultMirror.OutputMsg, errMirror)
+		}
+
+		expectedOutMirror := fmt.Sprintf("[WARNING]:-hostAddress has not been provided, populating it with same as hostName %s for the segment with port %d and data_directory %s", valueSegPair[0].Mirror.Hostname, valueSegPair[0].Mirror.Port, valueSegPair[0].Mirror.DataDirectory)
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Errorf("got %q, want %q", resultMirror.OutputMsg, expectedOutMirror)
+		}
+
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
 	t.Run("when both hostaddress and hostnames are not provided or hostname alone is empty", func(t *testing.T) {
 		var ok bool
 		configFile := testutils.GetTempFile(t, "config.json")
@@ -306,6 +431,9 @@ func TestInputFileValidation(t *testing.T) {
 
 		primarySegs := config.Get("segment-array")
 		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+
+		originalPrimaryHostname := valueSegPair[0].Primary.Hostname
+		originalPrimaryAddress := valueSegPair[0].Primary.Address
 
 		if !ok {
 			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
@@ -323,6 +451,27 @@ func TestInputFileValidation(t *testing.T) {
 		expectedOut := fmt.Sprintf("[ERROR]:-hostName has not been provided for the segment with port %d and data_directory %s", valueSegPair[0].Primary.Port, valueSegPair[0].Primary.DataDirectory)
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Errorf("got %q, want %q", result.OutputMsg, expectedOut)
+		}
+
+		// Restore original primary hostnames and addresses
+		valueSegPair[0].Primary.Hostname = originalPrimaryHostname
+		valueSegPair[0].Primary.Address = originalPrimaryAddress
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		// validation for mirror segments
+		valueSegPair[0].Mirror.Hostname = ""
+		valueSegPair[0].Mirror.Address = ""
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		resultMirror, errMirror := testutils.RunInitCluster(configFile)
+		if e, ok := errMirror.(*exec.ExitError); !ok || e.ExitCode() != 1 {
+			t.Fatalf("got %v, want exit status 1", errMirror)
+		}
+
+		// Validation for mirror segments
+		expectedOutMirror := fmt.Sprintf("[ERROR]:-hostName has not been provided for the segment with port %d and data_directory %s", valueSegPair[0].Mirror.Port, valueSegPair[0].Mirror.DataDirectory)
+		if !strings.Contains(resultMirror.OutputMsg, expectedOutMirror) {
+			t.Errorf("got %q, want %q", resultMirror.OutputMsg, expectedOutMirror)
 		}
 	})
 
@@ -350,6 +499,119 @@ func TestInputFileValidation(t *testing.T) {
 			t.Errorf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
 	})
+
+	t.Run("when number of primary and mirror segments are not equal", func(t *testing.T) {
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultConfig(t)
+
+		primarySegs := config.Get("segment-array")
+		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+
+		if !ok {
+			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
+		}
+
+		valueSegPair[0].Mirror = nil
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		numPrimary := len(valueSegPair)
+		numMirror := 0
+		for _, pair := range valueSegPair {
+			if pair.Mirror != nil {
+				numMirror++
+			}
+		}
+
+		result, err := testutils.RunInitCluster(configFile)
+		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
+			t.Fatalf("got %v, want exit status 1", err)
+		}
+
+		expectedOut := fmt.Sprintf("[ERROR]:-number of primary segments %d and number of mirror segments %d must be equal\n", numPrimary, numMirror)
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Errorf("got %q, want %q", result.OutputMsg, expectedOut)
+		}
+	})
+
+	t.Run("when invalid port number is provided for the segments", func(t *testing.T) {
+		var ok bool
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultConfig(t)
+
+		primarySegs := config.Get("segment-array")
+		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+
+		originalPrimaryPort := valueSegPair[0].Primary.Port
+
+		if !ok {
+			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
+		} else {
+			valueSegPair[0].Primary.Port = 0
+			SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+		}
+
+		result, err := testutils.RunInitCluster(configFile)
+		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
+			t.Fatalf("got %v, want exit status 1", err)
+		}
+
+		expectedOut := fmt.Sprintf("[ERROR]:-invalid port has been provided for segment with hostname %s and data_directory %s", valueSegPair[0].Primary.Hostname, valueSegPair[0].Primary.DataDirectory)
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Errorf("got %q, want %q", result.OutputMsg, expectedOut)
+		}
+
+		// Restore original primary port
+		valueSegPair[0].Primary.Port = originalPrimaryPort
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		// validation for mirror segments
+		valueSegPair[0].Mirror.Port = 0
+		SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+		resultMirror, errMirror := testutils.RunInitCluster(configFile)
+		if e, ok := errMirror.(*exec.ExitError); !ok || e.ExitCode() != 1 {
+			t.Fatalf("got %v, want exit status 1", errMirror)
+		}
+
+		// Validation for mirror segments
+		expectedOutMirror := fmt.Sprintf("[ERROR]:-invalid port has been provided for segment with hostname %s and data_directory %s", valueSegPair[0].Mirror.Hostname, valueSegPair[0].Mirror.DataDirectory)
+		if !strings.Contains(resultMirror.OutputMsg, expectedOutMirror) {
+			t.Errorf("got %q, want %q", resultMirror.OutputMsg, expectedOutMirror)
+		}
+	})
+
+	//TODO: FIX this once duplicate key bug is fixed in golang
+	// t.Run("when duplicate mirror keys are present", func(t *testing.T) {
+	// 	configFile := testutils.GetTempFile(t, "config.json")
+	// 	config := GetDefaultConfig(t)
+
+	// 	primarySegs := config.Get("segment-array")
+	// 	valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+	// 	if !ok {
+	// 		t.Fatalf("unexpected data type for segment-array %T", primarySegs)
+	// 	}
+
+	// 	// Add duplicate mirror key to the segment pair
+	// 	valueSegPair[0].Mirror = &cli.Segment{
+	// 		Hostname:      "testhost",
+	// 		Address:       "testhost",
+	// 		Port:          70010,
+	// 		DataDirectory: "/tmp/demo/mirror/gpseg10",
+	// 	}
+
+	// 	SetConfigKey(t, configFile, "segment-array", valueSegPair, true)
+
+	// 	result, err := testutils.RunInitCluster(configFile)
+	// 	if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
+	// 		t.Fatalf("got %v, want exit status 1", err)
+	// 	}
+
+	// 	expectedOut := "[ERROR]:-duplicate mirror keys are present\n"
+	// 	if !strings.Contains(result.OutputMsg, expectedOut) {
+	// 		t.Errorf("got %q, want %q", result.OutputMsg, expectedOut)
+	// 	}
+	// })
+
 }
 
 func GetDefaultConfig(t *testing.T) *viper.Viper {
@@ -365,6 +627,8 @@ func GetDefaultConfig(t *testing.T) *viper.Viper {
 	if err != nil {
 		t.Fatalf("unexpected error: %#v", err)
 	}
+	//hostList := []string{"cdw", "sdw1", "sdw2", "sdw3"}
+	coordinatorHost := hostList[0]
 
 	instance.Set("coordinator", cli.Segment{
 		Port:          testutils.DEFAULT_COORDINATOR_PORT,
@@ -380,14 +644,30 @@ func GetDefaultConfig(t *testing.T) *viper.Viper {
 
 	for i := 1; i < len(hostList); i++ {
 		hostPrimary := hostList[i]
+		hostMirror := hostList[(i+1)%len(hostList)]
+
+		if hostPrimary == coordinatorHost {
+			hostPrimary = hostList[(i+2)%len(hostList)]
+		}
+		if hostMirror == coordinatorHost {
+			hostMirror = hostList[(i+2)%len(hostList)]
+		}
+
 		primary := &cli.Segment{
-			Port:          testutils.DEFAULT_COORDINATOR_PORT + i + 1,
+			Port:          testutils.DEFAULT_COORDINATOR_PORT + i,
 			Hostname:      hostPrimary,
 			Address:       hostPrimary,
-			DataDirectory: filepath.Join("/tmp", "demo", fmt.Sprintf("%d", (i+1)-1)),
+			DataDirectory: filepath.Join("/tmp", "primary", fmt.Sprintf("gpseg%d", i-1)),
+		}
+		mirror := &cli.Segment{
+			Port:          testutils.DEFAULT_COORDINATOR_PORT + i + 4,
+			Hostname:      hostMirror,
+			Address:       hostMirror,
+			DataDirectory: filepath.Join("/tmp", "mirror", fmt.Sprintf("gpmirror%d", i)),
 		}
 		segments = append(segments, cli.SegmentPair{
 			Primary: primary,
+			Mirror:  mirror,
 		})
 	}
 	instance.Set("segment-array", segments)
