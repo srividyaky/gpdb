@@ -196,12 +196,49 @@ func LoadInputConfigToIdlFn(inputConfigFile string, cliHandler *viper.Viper, for
 			gplog.Error("multihome detection failed, error:%v", err)
 			return &idl.MakeClusterRequest{}, err
 		}
+		if isMultHome {
+			isValidMutliHomeConfig, err := ValidateMultiHomeConfig(config, NameAddressMap)
+			if !isValidMutliHomeConfig {
+				return &idl.MakeClusterRequest{}, err
+			}
+		}
 		//Expand details to config for primary
 		segmentPairArray := ExpandSegPairArray(config, isMultHome, NameAddressMap, AddressNameMap)
 		config.SegmentArray = segmentPairArray
 		// TODO to print expanded configuration here for user reference and print to file if required
 	}
 	return CreateMakeClusterReq(&config, force, verbose), nil
+}
+
+// ValidateMultiHomeConfig performs validation checks for multi-home environment
+func ValidateMultiHomeConfig(config InitConfig, addressMap map[string][]string) (bool, error) {
+	// Check if all the hosts in the host-list have same number of addresses
+	var addressLengthList []int
+	index := 0
+	for _, addressList := range addressMap {
+		addressLengthList = append(addressLengthList, len(addressList))
+		if index > 0 {
+			if addressLengthList[index] != addressLengthList[index-1] {
+				return false, fmt.Errorf("multi-home validation failed, all hosts should have same number of interfaces/aliases")
+			}
+		}
+		index++
+	}
+	// the number of directories per host is in multiple of number of addresses per host
+	if (addressLengthList[0] < len(config.PrimaryDataDirectories)) && (addressLengthList[0]%len(config.PrimaryDataDirectories)) != 0 {
+		return false, fmt.Errorf("multi-host setup must have data-directories in multiple of number of addresses or more. "+
+			"Number of data-directories:%d and number of addresses per host:%d", len(config.PrimaryDataDirectories), addressLengthList[0])
+	}
+
+	if ContainsMirror {
+		// Check if the total number of actual hosts is enough for spread mirroring
+		if config.MirroringType == constants.SpreadMirroringStr && !(len(addressMap) > len(config.MirrorDataDirectories)) {
+			return false, fmt.Errorf(fmt.Sprintf("To enable spread mirroring, number of hosts should be more than number of primary segments per host. "+
+				"Current number of unique hosts is: %d and number of primaries per host is:%d", len(addressMap), len(config.MirrorDataDirectories)))
+		}
+	}
+
+	return true, nil
 }
 
 // IsMultiHome checks if it is a multi-home environment
@@ -277,7 +314,7 @@ func ValidateExpansionConfigAndSetDefault(config *InitConfig, cliHandle *viper.V
 			gplog.Warn("No mirror-base-port value provided. Setting default to:%d", defaultMirrorBasePort)
 			config.MirrorBasePort = defaultMirrorBasePort
 		}
-		//TODO Check if spread mirroring, num hosts should be greater than number of primaries per host so that we can spread segments
+		// Check if spread mirroring, number of hosts should be greater than number of primaries per host so that we can spread segments
 		if config.MirroringType == constants.SpreadMirroringStr && len(config.MirrorDataDirectories) > len(config.HostList) {
 			strErr := fmt.Sprintf("To enable spread mirroring, number of hosts should be more than number of primary segments per host. "+
 				"Current number of hosts is: %d and number of primaries per host is:%d", len(config.HostList), len(config.MirrorDataDirectories))
@@ -299,7 +336,7 @@ func ValidateExpansionConfigAndSetDefault(config *InitConfig, cliHandle *viper.V
 		config.MirroringType = strings.ToLower(config.MirroringType)
 	} else {
 		// Mirror-less configuration
-		strErr := "No mirror-data-direcotiers provided. Will create mirrorless cluster"
+		strErr := "No mirror-data-directories provided. Will create mirror-less cluster"
 		gplog.Warn(strErr)
 		ContainsMirror = false
 	}

@@ -35,6 +35,59 @@ func TestMain(m *testing.M) {
 	os.Exit(exectest.Run(m))
 }
 
+func TestValidateMultiHomeConfig(t *testing.T) {
+	setupTest(t)
+	defer teardownTest()
+	t.Run("returns error when the hosts in the host list has different number of interfaces", func(t *testing.T) {
+		testStr := "multi-home validation failed, all hosts should have same number of interfaces/aliase"
+		config := cli.InitConfig{}
+		addressMap := map[string][]string{
+			"sdw1": {"sdw1-1", "sdw1-2", "sdw1-3", "sdw1-4"},
+			"sdw2": {"sdw2-1", "sdw2-2", "sdw2-3", "sdw2-4"},
+			"sdw3": {"sdw3-1", "sdw3-2", "sdw3-3"},
+			"sdw4": {"sdw4-1", "sdw4-2", "sdw4-3", "sdw4-4"},
+		}
+
+		_, err := cli.ValidateMultiHomeConfig(config, addressMap)
+		if err == nil || !strings.Contains(err.Error(), testStr) {
+			t.Fatalf("Got:%v, Want: %s", err, testStr)
+		}
+	})
+	t.Run("returns error when the directories per host are not in multiple of number of interfaces", func(t *testing.T) {
+		testStr := "multi-host setup must have data-directories in multiple of number of addresses or more."
+		config := cli.InitConfig{PrimaryDataDirectories: []string{"/tmp", "/tmp", "/tmp"}}
+		addressMap := map[string][]string{
+			"sdw1": {"sdw1-1", "sdw1-2"},
+			"sdw2": {"sdw2-1", "sdw2-2"},
+			"sdw3": {"sdw3-1", "sdw3-2"},
+			"sdw4": {"sdw4-1", "sdw4-2"},
+		}
+
+		_, err := cli.ValidateMultiHomeConfig(config, addressMap)
+		if err == nil || !strings.Contains(err.Error(), testStr) {
+			t.Fatalf("Got:%v, Want: %s", err, testStr)
+		}
+	})
+	t.Run("returns error when spread mirroring and number of unique hosts is lesser", func(t *testing.T) {
+		testStr := "To enable spread mirroring, number of hosts should be more than number of primary segments per host."
+		config := cli.InitConfig{PrimaryDataDirectories: []string{"/tmp", "/tmp", "/tmp", "/tmp"},
+			MirrorDataDirectories: []string{"/tmp", "/tmp", "/tmp", "/tmp"},
+			MirroringType:         constants.SpreadMirroringStr}
+		addressMap := map[string][]string{
+			"sdw1": {"sdw1-1", "sdw1-2", "sdw1-3", "sdw1-4"},
+			"sdw2": {"sdw2-1", "sdw2-2", "sdw2-3", "sdw2-4"},
+			"sdw3": {"sdw3-1", "sdw3-2", "sdw3-3", "sdw3-4"},
+			"sdw4": {"sdw4-1", "sdw4-2", "sdw4-3", "sdw4-4"},
+		}
+		cli.ContainsMirror = true
+
+		_, err := cli.ValidateMultiHomeConfig(config, addressMap)
+		if err == nil || !strings.Contains(err.Error(), testStr) {
+			t.Fatalf("Got:%v, Want: %s", err, testStr)
+		}
+	})
+}
+
 func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 	setupTest(t)
 	defer teardownTest()
