@@ -790,16 +790,4 @@ func SetConfigKey(t *testing.T, filename string, key string, value interface{}, 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-
-	configSettings := config.AllSettings()
-
-	// Marshal the settings into JSON format
-	jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// Print the JSON configuration
-	fmt.Println("Updated configuration:")
-	fmt.Println(string(jsonConfig))
 }
