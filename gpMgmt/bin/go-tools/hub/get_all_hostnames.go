@@ -64,21 +64,21 @@ func (s *Server) GetAllHostNames(ctx context.Context, request *idl.GetAllHostNam
 	for address, conn := range addressConnectionMap {
 		wg.Add(1)
 
-		go func(address string, conn *idl.AgentClient) {
+		go func(addr string, connection idl.AgentClient) {
 			defer wg.Done()
 			request := idl.GetHostNameRequest{}
-			reply, err := (*conn).GetHostName(context.Background(), &request)
+			reply, err := connection.GetHostName(context.Background(), &request)
 			if err != nil {
-				errs <- fmt.Errorf("host: %s, %w", address, err)
-				errs <- utils.LogAndReturnError(fmt.Errorf("getting hostname for %s failed with error:%v", address, err))
+				errs <- fmt.Errorf("host: %s, %w", addr, err)
+				errs <- utils.LogAndReturnError(fmt.Errorf("getting hostname for %s failed with error:%v", addr, err))
 				return
 			}
 
 			result := new(RpcReply)
-			result.address = address
+			result.address = addr
 			result.hostname = reply.Hostname
 			replies <- *result
-		}(address, &conn)
+		}(address, conn)
 	}
 	wg.Wait()
 	close(replies)
