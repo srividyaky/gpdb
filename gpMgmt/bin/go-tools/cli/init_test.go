@@ -69,10 +69,10 @@ func TestValidateMultiHomeConfig(t *testing.T) {
 		}
 	})
 	t.Run("returns error when spread mirroring and number of unique hosts is lesser", func(t *testing.T) {
-		testStr := "To enable spread mirroring, number of hosts should be more than number of primary segments per host."
+		testStr := "to enable spread mirroring, number of hosts should be more than number of primary segments per host."
 		config := cli.InitConfig{PrimaryDataDirectories: []string{"/tmp", "/tmp", "/tmp", "/tmp"},
 			MirrorDataDirectories: []string{"/tmp", "/tmp", "/tmp", "/tmp"},
-			MirroringType:         constants.SpreadMirroringStr}
+			MirroringType:         constants.SpreadMirroring}
 		addressMap := map[string][]string{
 			"sdw1": {"sdw1-1", "sdw1-2", "sdw1-3", "sdw1-4"},
 			"sdw2": {"sdw2-1", "sdw2-2", "sdw2-3", "sdw2-4"},
@@ -103,6 +103,7 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 	t.Run("returns error when hostlist not provided", func(t *testing.T) {
 		testStr := "hostlist not specified. Please specify hostlist to continue"
 		cliHandle := viper.New()
+		cliHandle.Set("primary-data-directories", []string{"/test"})
 		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}}
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
@@ -113,6 +114,9 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		cliHandle := viper.New()
 		basePort := 9000
 		expectedPrimaryPort := basePort + 2
+		cliHandle.Set("primary-data-directories", []string{"/test"})
+		cliHandle.Set("hostlist", []string{"swd1"})
+
 		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort}}
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err != nil {
@@ -126,11 +130,14 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		}
 	})
 	t.Run("returns error when segment array is defined and expansion parameters also present", func(t *testing.T) {
-		testStr := "segments-array list should be empty when configuration contains primary-base-directories and hostlist"
+		testStr := "cannot specify segments-array and primary-base-directories together"
 		cliHandle := viper.New()
 		basePort := 9000
+		segArray := []cli.SegmentPair{{Primary: &cli.Segment{Hostname: "sdw1"}}}
+		cliHandle.Set("segment-array", segArray)
+
 		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort},
-			SegmentArray: []cli.SegmentPair{{Primary: &cli.Segment{Hostname: "sdw1"}}}}
+			SegmentArray: segArray}
 
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
@@ -145,6 +152,8 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort},
 			MirrorBasePort: 10000}
 		cliHandle.Set("mirror-base-port", basePort)
+		cliHandle.Set("primary-data-directories", []string{"/test"})
+		cliHandle.Set("hostlist", []string{"swd1"})
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
 			t.Fatalf("Got:%v, Expected:%s", err, testStr)
@@ -157,18 +166,23 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort},
 			MirrorBasePort: 10000, MirrorDataDirectories: []string{"/test1", "/test2"}}
 		cliHandle.Set("mirror-base-port", basePort)
+		cliHandle.Set("primary-data-directories", []string{"/test"})
+		cliHandle.Set("hostlist", []string{"swd1"})
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
 			t.Fatalf("Got:%v, Expected:%s", err, testStr)
 		}
 	})
 	t.Run("returns error when unknown mirroring type provided", func(t *testing.T) {
-		testStr := "is not supported. Only 'group' or 'spread' mirroring is supported"
+		testStr := "invalid mirroring-Type: unknown. Valid options are 'group' and 'spread'"
 		cliHandle := viper.New()
 		basePort := 9000
 		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort},
 			MirrorBasePort: 10000, MirrorDataDirectories: []string{"/test1"}, MirroringType: "UNKNOWN"}
 		cliHandle.Set("mirror-base-port", basePort)
+		cliHandle.Set("primary-data-directories", []string{"/test"})
+		cliHandle.Set("hostlist", []string{"swd1"})
+		cliHandle.Set("mirroring-type", "Unknown")
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
 			t.Fatalf("Got:%v, Expected:%s", err, testStr)
@@ -179,8 +193,10 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		cliHandle := viper.New()
 		basePort := 9000
 		expectedMirrorPort := basePort + 1002
-		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort}, MirrorDataDirectories: []string{"/test1"}, MirroringType: constants.GroupMirroringStr}
-		cliHandle.Set("mirroring-type", constants.GroupMirroringStr)
+		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort}, MirrorDataDirectories: []string{"/test1"}, MirroringType: constants.GroupMirroring}
+		cliHandle.Set("mirroring-type", constants.GroupMirroring)
+		cliHandle.Set("primary-data-directories", []string{"/test"})
+		cliHandle.Set("hostlist", []string{"swd1"})
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err != nil {
 			t.Fatalf("Got:%v, Expected no error", err)
@@ -190,17 +206,18 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		}
 	})
 	t.Run("sets default mirroring type value properly", func(t *testing.T) {
-		//testStr := "is not supported. Only 'group' or 'spread' mirroring is supported"
 		cliHandle := viper.New()
 		basePort := 9000
 		expectedMirroringType := "group"
-		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort}, MirrorDataDirectories: []string{"/test1"}}
+		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort}, MirrorDataDirectories: []string{"/test1"}, MirrorBasePort: 10000}
 		cliHandle.Set("mirror-base-port", basePort)
+		cliHandle.Set("primary-data-directories", []string{"/test"})
+		cliHandle.Set("hostlist", []string{"swd1"})
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err != nil {
 			t.Fatalf("Got:%v, Expected no error", err)
 		}
-		if config.MirroringType != constants.GroupMirroringStr {
+		if config.MirroringType != constants.GroupMirroring {
 			t.Fatalf("mirroring-typet Got:%s, Expected:%s", config.MirroringType, expectedMirroringType)
 		}
 	})
@@ -208,8 +225,10 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		testStr := "To enable spread mirroring, number of hosts should be more than number of primary segments per host."
 		cliHandle := viper.New()
 		basePort := 9000
-		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test1", "/test2", "/test3"}, HostList: []string{"swd1", "sdw2"}, Coordinator: cli.Segment{Port: basePort}, MirrorDataDirectories: []string{"/mirror1", "/mirror2", "/mirror3"}, MirroringType: constants.SpreadMirroringStr}
-		cliHandle.Set("mirroring-type", constants.SpreadMirroringStr)
+		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test1", "/test2", "/test3"}, HostList: []string{"swd1", "sdw2"}, Coordinator: cli.Segment{Port: basePort}, MirrorDataDirectories: []string{"/mirror1", "/mirror2", "/mirror3"}, MirroringType: constants.SpreadMirroring}
+		cliHandle.Set("mirroring-type", constants.SpreadMirroring)
+		cliHandle.Set("primary-data-directories", []string{"/test"})
+		cliHandle.Set("hostlist", []string{"swd1"})
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
 			t.Fatalf("Got:%v, Expected:%s", err, testStr)
@@ -329,10 +348,10 @@ func TestExpandNonMultiHomePrimaryList(t *testing.T) {
 		hostList := []string{"sdw1", "sdw2"}
 		addressNameMap := map[string]string{"sdw1": "sdw1", "sdw2": "sdw2"}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg3"}},
 		}
 		segPairList = *cli.ExpandNonMultiHomePrimaryList(&segPairList, primaryBasePort, primaryBaseDataDirectories, hostList, addressNameMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
@@ -350,10 +369,10 @@ func TestExpandNonMultiHomePrimaryList(t *testing.T) {
 		hostList := []string{"sdw1", "sdw2"}
 		addressNameMap := map[string]string{"sdw1": "sdw1", "sdw2": "sdw2"}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test1/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test2/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test1/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test2/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test1/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test2/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test1/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test2/gpseg3"}},
 		}
 		segPairList = *cli.ExpandNonMultiHomePrimaryList(&segPairList, primaryBasePort, primaryBaseDataDirectories, hostList, addressNameMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
@@ -378,10 +397,10 @@ func TestExpandMultiHomePrimaryArray(t *testing.T) {
 			"sdw2": {"sdw2-1", "sdw2-2"},
 		}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg3"}},
 		}
 		segPairList = *cli.ExpandMultiHomePrimaryArray(&segPairList, primaryBasePort, primaryBaseDataDirectories, uniqHostnameList, nameAddressMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
@@ -402,10 +421,10 @@ func TestExpandMultiHomePrimaryArray(t *testing.T) {
 			"sdw2": {"sdw2-1", "sdw2-2"},
 		}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test1/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test2/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test1/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test2/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test1/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test2/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test1/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test2/gpseg3"}},
 		}
 		segPairList = *cli.ExpandMultiHomePrimaryArray(&segPairList, primaryBasePort, primaryBaseDataDirectories, uniqHostnameList, nameAddressMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
@@ -428,10 +447,10 @@ func TestExpandNonMultiHomeGroupMirrorList(t *testing.T) {
 		hostList := []string{"sdw1", "sdw2"}
 		addressNameMap := map[string]string{"sdw1": "sdw1", "sdw2": "sdw2"}
 		expectedSegPairList := []cli.SegmentPair{
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg-0"}},
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg-1"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test/gpseg-2"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg-3"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg0"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg1"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test/gpseg2"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg3"}},
 		}
 		segPairList = make([]cli.SegmentPair, 4)
 		segPairList = *cli.ExpandNonMultiHomeGroupMirrorList(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, hostList, addressNameMap)
@@ -450,10 +469,10 @@ func TestExpandNonMultiHomeGroupMirrorList(t *testing.T) {
 		hostList := []string{"sdw1", "sdw2"}
 		addressNameMap := map[string]string{"sdw1": "sdw1", "sdw2": "sdw2"}
 		expectedSegPairList := []cli.SegmentPair{
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test1/gpseg-0"}},
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test2/gpseg-1"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test1/gpseg-2"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test2/gpseg-3"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test1/gpseg0"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test2/gpseg1"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test1/gpseg2"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test2/gpseg3"}},
 		}
 		segPairList = make([]cli.SegmentPair, 4)
 		segPairList = *cli.ExpandNonMultiHomeGroupMirrorList(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, hostList, addressNameMap)
@@ -476,12 +495,12 @@ func TestExpandNonMultiHomeSpreadMirrorList(t *testing.T) {
 		hostList := []string{"sdw1", "sdw2", "sdw3"}
 		addressNameMap := map[string]string{"sdw1": "sdw1", "sdw2": "sdw2", "sdw3": "sdw3"}
 		expectedSegPairList := []cli.SegmentPair{
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg-0"}},
-			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 9001, DataDirectory: "/test/gpseg-1"}},
-			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 9000, DataDirectory: "/test/gpseg-2"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg-3"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test/gpseg-4"}},
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg-5"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg0"}},
+			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 9001, DataDirectory: "/test/gpseg1"}},
+			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 9000, DataDirectory: "/test/gpseg2"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg3"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test/gpseg4"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg5"}},
 		}
 		segPairList = make([]cli.SegmentPair, 6)
 		segPairList = *cli.ExpandNonMultiHomeSpreadMirroring(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, hostList, addressNameMap)
@@ -500,12 +519,12 @@ func TestExpandNonMultiHomeSpreadMirrorList(t *testing.T) {
 		hostList := []string{"sdw1", "sdw2", "sdw3"}
 		addressNameMap := map[string]string{"sdw1": "sdw1", "sdw2": "sdw2", "sdw3": "sdw3"}
 		expectedSegPairList := []cli.SegmentPair{
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test1/gpseg-0"}},
-			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 9001, DataDirectory: "/test2/gpseg-1"}},
-			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 9000, DataDirectory: "/test1/gpseg-2"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test2/gpseg-3"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test1/gpseg-4"}},
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test2/gpseg-5"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test1/gpseg0"}},
+			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 9001, DataDirectory: "/test2/gpseg1"}},
+			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 9000, DataDirectory: "/test1/gpseg2"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test2/gpseg3"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test1/gpseg4"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test2/gpseg5"}},
 		}
 		segPairList = make([]cli.SegmentPair, 6)
 		segPairList = *cli.ExpandNonMultiHomeSpreadMirroring(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, hostList, addressNameMap)
@@ -532,10 +551,10 @@ func TestExpandMultiHomeGroupMirrorList(t *testing.T) {
 			"sdw2": {"sdw2-1", "sdw2-2"},
 		}
 		expectedSegPairList := []cli.SegmentPair{
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg-0"}},
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg-1"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg-2"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test/gpseg-3"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg0"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg1"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg2"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test/gpseg3"}},
 		}
 		segPairList = *cli.ExpandMultiHomeGroupMirrorList(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, uniqHostnameList, nameAddressMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
@@ -557,10 +576,10 @@ func TestExpandMultiHomeGroupMirrorList(t *testing.T) {
 			"sdw2": {"sdw2-1", "sdw2-2"},
 		}
 		expectedSegPairList := []cli.SegmentPair{
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test1/gpseg-0"}},
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test2/gpseg-1"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test1/gpseg-2"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test2/gpseg-3"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test1/gpseg0"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test2/gpseg1"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test1/gpseg2"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test2/gpseg3"}},
 		}
 		segPairList = *cli.ExpandMultiHomeGroupMirrorList(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, uniqHostnameList, nameAddressMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
@@ -587,12 +606,12 @@ func TestExpandMultiHomeSpreadMirrorList(t *testing.T) {
 			"sdw3": {"sdw3-1", "sdw3-2"},
 		}
 		expectedSegPairList := []cli.SegmentPair{
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg-0"}},
-			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 9001, DataDirectory: "/test/gpseg-1"}},
-			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 9000, DataDirectory: "/test/gpseg-2"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9001, DataDirectory: "/test/gpseg-3"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg-4"}},
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg-5"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg0"}},
+			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 9001, DataDirectory: "/test/gpseg1"}},
+			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 9000, DataDirectory: "/test/gpseg2"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9001, DataDirectory: "/test/gpseg3"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg4"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg5"}},
 		}
 		segPairList = *cli.ExpandMultiHomeSpreadMirrorList(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, uniqHostnameList, nameAddressMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
@@ -615,12 +634,12 @@ func TestExpandMultiHomeSpreadMirrorList(t *testing.T) {
 			"sdw3": {"sdw3-1", "sdw3-2"},
 		}
 		expectedSegPairList := []cli.SegmentPair{
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test1/gpseg-0"}},
-			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 9001, DataDirectory: "/test2/gpseg-1"}},
-			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 9000, DataDirectory: "/test1/gpseg-2"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9001, DataDirectory: "/test2/gpseg-3"}},
-			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test1/gpseg-4"}},
-			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test2/gpseg-5"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test1/gpseg0"}},
+			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 9001, DataDirectory: "/test2/gpseg1"}},
+			{Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 9000, DataDirectory: "/test1/gpseg2"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9001, DataDirectory: "/test2/gpseg3"}},
+			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test1/gpseg4"}},
+			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test2/gpseg5"}},
 		}
 		segPairList = *cli.ExpandMultiHomeSpreadMirrorList(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, uniqHostnameList, nameAddressMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
@@ -647,10 +666,10 @@ func TestExpandSegPairArray(t *testing.T) {
 		addressNameMap := map[string]string{"sdw1": "sdw1", "sdw2": "sdw2"}
 		nameAddressMap := map[string][]string{"sdw1": {"sdw1"}, "sdw2": {"sdw2"}}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg3"}},
 		}
 		cli.ContainsMirror = false
 
@@ -678,10 +697,10 @@ func TestExpandSegPairArray(t *testing.T) {
 		addressNameMap := map[string]string{"sdw1": "sdw1", "sdw2": "sdw2"}
 		nameAddressMap := map[string][]string{"sdw1": {"sdw1"}, "sdw2": {"sdw2"}}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test1/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test2/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test1/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test2/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test1/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test2/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test1/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test2/gpseg3"}},
 		}
 		cli.ContainsMirror = false
 
@@ -709,10 +728,10 @@ func TestExpandSegPairArray(t *testing.T) {
 		addressNameMap := map[string]string{"sdw1-1": "sdw1", "sdw2-1": "sdw2"}
 		nameAddressMap := map[string][]string{"sdw1": {"sdw1-1"}, "sdw2": {"sdw2-1"}}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9001, DataDirectory: "/test/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9001, DataDirectory: "/test/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9001, DataDirectory: "/test/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9001, DataDirectory: "/test/gpseg3"}},
 		}
 		cli.ContainsMirror = false
 
@@ -740,10 +759,10 @@ func TestExpandSegPairArray(t *testing.T) {
 		addressNameMap := map[string]string{"sdw1-1": "sdw1", "sdw1-2": "sdw1", "sdw2-1": "sdw2", "sdw2-2": "sdw2"}
 		nameAddressMap := map[string][]string{"sdw1": {"sdw1-1", "sdw1-2"}, "sdw2": {"sdw2-1", "sdw2-2"}}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg3"}},
 		}
 		cli.ContainsMirror = false
 
@@ -771,10 +790,10 @@ func TestExpandSegPairArray(t *testing.T) {
 		addressNameMap := map[string]string{"sdw1-1": "sdw1", "sdw1-2": "sdw1", "sdw2-1": "sdw2", "sdw2-2": "sdw2"}
 		nameAddressMap := map[string][]string{"sdw1": {"sdw1-1", "sdw1-2"}, "sdw2": {"sdw2-1", "sdw2-2"}}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test1/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test2/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test1/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test2/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test1/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test2/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test1/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test2/gpseg3"}},
 		}
 		cli.ContainsMirror = false
 
@@ -799,20 +818,20 @@ func TestExpandSegPairArray(t *testing.T) {
 			HostList:               []string{"sdw1", "sdw2"},
 			MirrorDataDirectories:  []string{"/mirror", "/mirror"},
 			MirrorBasePort:         10000,
-			MirroringType:          constants.GroupMirroringStr,
+			MirroringType:          constants.GroupMirroring,
 		}
 		addressNameMap := map[string]string{"sdw1": "sdw1", "sdw2": "sdw2"}
 		nameAddressMap := map[string][]string{"sdw1": {"sdw1"}, "sdw2": {"sdw2"}}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test/gpseg-0"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 10000, DataDirectory: "/mirror/gpseg-0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test/gpseg0"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 10000, DataDirectory: "/mirror/gpseg0"}},
 
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg-1"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 10001, DataDirectory: "/mirror/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg-2"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 10000, DataDirectory: "/mirror/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg-3"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 10001, DataDirectory: "/mirror/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg1"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 10001, DataDirectory: "/mirror/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg2"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 10000, DataDirectory: "/mirror/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg3"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 10001, DataDirectory: "/mirror/gpseg3"}},
 		}
 		cli.ContainsMirror = true
 
@@ -835,23 +854,23 @@ func TestExpandSegPairArray(t *testing.T) {
 			HostList:               []string{"sdw1", "sdw2", "sdw3"},
 			MirrorDataDirectories:  []string{"/mirror", "/mirror"},
 			MirrorBasePort:         10000,
-			MirroringType:          constants.SpreadMirroringStr,
+			MirroringType:          constants.SpreadMirroring,
 		}
 		addressNameMap := map[string]string{"sdw1": "sdw1", "sdw2": "sdw2", "sdw3": "sdw3"}
 		nameAddressMap := map[string][]string{"sdw1": {"sdw1"}, "sdw2": {"sdw2"}, "sdw3": {"sdw3"}}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test/gpseg-0"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 10000, DataDirectory: "/mirror/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg-1"},
-				Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 10001, DataDirectory: "/mirror/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg-2"},
-				Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 10000, DataDirectory: "/mirror/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg-3"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 10001, DataDirectory: "/mirror/gpseg-3"}},
-			{Primary: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 9000, DataDirectory: "/test/gpseg-4"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 10000, DataDirectory: "/mirror/gpseg-4"}},
-			{Primary: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 9001, DataDirectory: "/test/gpseg-5"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 10001, DataDirectory: "/mirror/gpseg-5"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test/gpseg0"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 10000, DataDirectory: "/mirror/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg1"},
+				Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 10001, DataDirectory: "/mirror/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg2"},
+				Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 10000, DataDirectory: "/mirror/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg3"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 10001, DataDirectory: "/mirror/gpseg3"}},
+			{Primary: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 9000, DataDirectory: "/test/gpseg4"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 10000, DataDirectory: "/mirror/gpseg4"}},
+			{Primary: &cli.Segment{Hostname: "sdw3", Address: "sdw3", Port: 9001, DataDirectory: "/test/gpseg5"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 10001, DataDirectory: "/mirror/gpseg5"}},
 		}
 		cli.ContainsMirror = true
 
@@ -874,19 +893,19 @@ func TestExpandSegPairArray(t *testing.T) {
 			HostList:               []string{"sdw1", "sdw2"},
 			MirrorDataDirectories:  []string{"/mirror1", "/mirror2"},
 			MirrorBasePort:         10000,
-			MirroringType:          constants.GroupMirroringStr,
+			MirroringType:          constants.GroupMirroring,
 		}
 		addressNameMap := map[string]string{"sdw1": "sdw1", "sdw2": "sdw2"}
 		nameAddressMap := map[string][]string{"sdw1": {"sdw1"}, "sdw2": {"sdw2"}}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test1/gpseg-0"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 10000, DataDirectory: "/mirror1/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test2/gpseg-1"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 10001, DataDirectory: "/mirror2/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test1/gpseg-2"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 10000, DataDirectory: "/mirror1/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test2/gpseg-3"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 10001, DataDirectory: "/mirror2/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9000, DataDirectory: "/test1/gpseg0"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 10000, DataDirectory: "/mirror1/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test2/gpseg1"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 10001, DataDirectory: "/mirror2/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test1/gpseg2"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 10000, DataDirectory: "/mirror1/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test2/gpseg3"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 10001, DataDirectory: "/mirror2/gpseg3"}},
 		}
 		cli.ContainsMirror = true
 
@@ -905,20 +924,20 @@ func TestExpandSegPairArray(t *testing.T) {
 			HostList:               []string{"sdw1-1", "sdw2-1"},
 			MirrorDataDirectories:  []string{"/mirror", "/mirror"},
 			MirrorBasePort:         10000,
-			MirroringType:          constants.GroupMirroringStr,
+			MirroringType:          constants.GroupMirroring,
 		}
 		addressNameMap := map[string]string{"sdw1-1": "sdw1", "sdw2-1": "sdw2"}
 		nameAddressMap := map[string][]string{"sdw1": {"sdw1-1"}, "sdw2": {"sdw2-1"}}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg-0"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 10000, DataDirectory: "/mirror/gpseg-0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg0"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 10000, DataDirectory: "/mirror/gpseg0"}},
 
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9001, DataDirectory: "/test/gpseg-1"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 10001, DataDirectory: "/mirror/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg-2"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10000, DataDirectory: "/mirror/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9001, DataDirectory: "/test/gpseg-3"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10001, DataDirectory: "/mirror/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9001, DataDirectory: "/test/gpseg1"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 10001, DataDirectory: "/mirror/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg2"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10000, DataDirectory: "/mirror/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9001, DataDirectory: "/test/gpseg3"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10001, DataDirectory: "/mirror/gpseg3"}},
 		}
 		cli.ContainsMirror = true
 
@@ -941,23 +960,23 @@ func TestExpandSegPairArray(t *testing.T) {
 			HostList:               []string{"sdw1-1", "sdw2-1", "sdw3-1"},
 			MirrorDataDirectories:  []string{"/mirror", "/mirror"},
 			MirrorBasePort:         10000,
-			MirroringType:          constants.SpreadMirroringStr,
+			MirroringType:          constants.SpreadMirroring,
 		}
 		addressNameMap := map[string]string{"sdw1-1": "sdw1", "sdw2-1": "sdw2", "sdw3-1": "sdw3"}
 		nameAddressMap := map[string][]string{"sdw1": {"sdw1-1"}, "sdw2": {"sdw2-1"}, "sdw3": {"sdw3-1"}}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg-0"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 10000, DataDirectory: "/mirror/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9001, DataDirectory: "/test/gpseg-1"},
-				Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-1", Port: 10001, DataDirectory: "/mirror/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg-2"},
-				Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-1", Port: 10000, DataDirectory: "/mirror/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9001, DataDirectory: "/test/gpseg-3"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10001, DataDirectory: "/mirror/gpseg-3"}},
-			{Primary: &cli.Segment{Hostname: "sdw3", Address: "sdw3-1", Port: 9000, DataDirectory: "/test/gpseg-4"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10000, DataDirectory: "/mirror/gpseg-4"}},
-			{Primary: &cli.Segment{Hostname: "sdw3", Address: "sdw3-1", Port: 9001, DataDirectory: "/test/gpseg-5"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 10001, DataDirectory: "/mirror/gpseg-5"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg0"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 10000, DataDirectory: "/mirror/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9001, DataDirectory: "/test/gpseg1"},
+				Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-1", Port: 10001, DataDirectory: "/mirror/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg2"},
+				Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-1", Port: 10000, DataDirectory: "/mirror/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9001, DataDirectory: "/test/gpseg3"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10001, DataDirectory: "/mirror/gpseg3"}},
+			{Primary: &cli.Segment{Hostname: "sdw3", Address: "sdw3-1", Port: 9000, DataDirectory: "/test/gpseg4"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10000, DataDirectory: "/mirror/gpseg4"}},
+			{Primary: &cli.Segment{Hostname: "sdw3", Address: "sdw3-1", Port: 9001, DataDirectory: "/test/gpseg5"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 10001, DataDirectory: "/mirror/gpseg5"}},
 		}
 		cli.ContainsMirror = true
 
@@ -980,19 +999,19 @@ func TestExpandSegPairArray(t *testing.T) {
 			HostList:               []string{"sdw1-1", "sdw1-2", "sdw2-1", "sdw2-2"},
 			MirrorDataDirectories:  []string{"/mirror", "/mirror"},
 			MirrorBasePort:         10000,
-			MirroringType:          constants.GroupMirroringStr,
+			MirroringType:          constants.GroupMirroring,
 		}
 		addressNameMap := map[string]string{"sdw1-1": "sdw1", "sdw1-2": "sdw1", "sdw2-1": "sdw2", "sdw2-2": "sdw2"}
 		nameAddressMap := map[string][]string{"sdw1": {"sdw1-1", "sdw1-2"}, "sdw2": {"sdw2-1", "sdw2-2"}}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg-0"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 10000, DataDirectory: "/mirror/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test/gpseg-1"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 10001, DataDirectory: "/mirror/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg-2"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10000, DataDirectory: "/mirror/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg-3"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 10001, DataDirectory: "/mirror/gpseg-3"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg0"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 10000, DataDirectory: "/mirror/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test/gpseg1"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 10001, DataDirectory: "/mirror/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg2"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10000, DataDirectory: "/mirror/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg3"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 10001, DataDirectory: "/mirror/gpseg3"}},
 		}
 		cli.ContainsMirror = true
 
@@ -1015,23 +1034,23 @@ func TestExpandSegPairArray(t *testing.T) {
 			HostList:               []string{"sdw1-1", "sdw1-2", "sdw2-1", "sdw2-2", "sdw3-1", "sdw3-2"},
 			MirrorDataDirectories:  []string{"/mirror", "/mirror"},
 			MirrorBasePort:         10000,
-			MirroringType:          constants.SpreadMirroringStr,
+			MirroringType:          constants.SpreadMirroring,
 		}
 		addressNameMap := map[string]string{"sdw1-1": "sdw1", "sdw1-2": "sdw1", "sdw2-1": "sdw2", "sdw2-2": "sdw2", "sdw3-1": "sdw3", "sdw3-2": "sdw3"}
 		nameAddressMap := map[string][]string{"sdw1": {"sdw1-1", "sdw1-2"}, "sdw2": {"sdw2-1", "sdw2-2"}, "sdw3": {"sdw3-1", "sdw3-2"}}
 		expectedSegPairList := []cli.SegmentPair{
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg-0"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 10000, DataDirectory: "/mirror/gpseg-0"}},
-			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test/gpseg-1"},
-				Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 10001, DataDirectory: "/mirror/gpseg-1"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg-2"},
-				Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 10000, DataDirectory: "/mirror/gpseg-2"}},
-			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg-3"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10001, DataDirectory: "/mirror/gpseg-3"}},
-			{Primary: &cli.Segment{Hostname: "sdw3", Address: "sdw3-1", Port: 9000, DataDirectory: "/test/gpseg-4"},
-				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10000, DataDirectory: "/mirror/gpseg-4"}},
-			{Primary: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 9001, DataDirectory: "/test/gpseg-5"},
-				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 10001, DataDirectory: "/mirror/gpseg-5"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg0"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 10000, DataDirectory: "/mirror/gpseg0"}},
+			{Primary: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test/gpseg1"},
+				Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 10001, DataDirectory: "/mirror/gpseg1"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg2"},
+				Mirror: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 10000, DataDirectory: "/mirror/gpseg2"}},
+			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg3"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10001, DataDirectory: "/mirror/gpseg3"}},
+			{Primary: &cli.Segment{Hostname: "sdw3", Address: "sdw3-1", Port: 9000, DataDirectory: "/test/gpseg4"},
+				Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 10000, DataDirectory: "/mirror/gpseg4"}},
+			{Primary: &cli.Segment{Hostname: "sdw3", Address: "sdw3-2", Port: 9001, DataDirectory: "/test/gpseg5"},
+				Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 10001, DataDirectory: "/mirror/gpseg5"}},
 		}
 		cli.ContainsMirror = true
 
