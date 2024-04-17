@@ -3,6 +3,7 @@ package hub
 import (
 	"context"
 	"fmt"
+	"github.com/greenplum-db/gpdb/gp/utils"
 	"sync"
 
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
@@ -68,8 +69,8 @@ func (s *Server) GetAllHostNames(ctx context.Context, request *idl.GetAllHostNam
 			request := idl.GetHostNameRequest{}
 			reply, err := (*conn).GetHostName(context.Background(), &request)
 			if err != nil {
-				gplog.Error("getting hostname for %s failed with error:%v", address, err)
 				errs <- fmt.Errorf("host: %s, %w", address, err)
+				errs <- utils.LogAndReturnError(fmt.Errorf("getting hostname for %s failed with error:%v", address, err))
 				return
 			}
 
