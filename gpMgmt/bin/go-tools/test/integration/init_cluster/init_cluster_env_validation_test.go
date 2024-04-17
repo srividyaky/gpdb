@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/greenplum-db/gpdb/gp/cli"
 	"github.com/greenplum-db/gpdb/gp/test/integration/testutils"
@@ -76,7 +77,6 @@ func TestEnvValidation(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %#v", err)
 		}
-
 		defer lis.Close()
 
 		result, err := testutils.RunInitCluster(configFile)
@@ -84,13 +84,12 @@ func TestEnvValidation(t *testing.T) {
 			t.Fatalf("got %v, want exit status 1", err)
 		}
 
-		//expectedOut := fmt.Sprintf("[ERROR]:-host: %s, ports already in use: [%s:%d], check if cluster already running", value.Hostname, value.Address, value.Port)
-
-		expectedOut := fmt.Sprintf("ERROR]:-validating hosts: host: %s, ports already in use: map[%d:true], check if cluster already running", value.Hostname, value.Port)
+		expectedOut := fmt.Sprintf("ERROR]:-validating hosts: host: %s, ports already in use: [%d], check if cluster already running", value.Hostname, value.Port)
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
 	})
+
 	t.Run("when the initdb does not have appropriate permission", func(t *testing.T) {
 		var value cli.Segment
 		var ok bool
@@ -129,7 +128,6 @@ func TestEnvValidation(t *testing.T) {
 			t.Fatalf("got %v, want exit status 1", err)
 		}
 
-		//expectedOut := fmt.Sprintf("[ERROR]:-host: %s, file %s does not have execute permissions", value.Hostname, initdbFilePath)
 		expectedOut := fmt.Sprintf("[ERROR]:-validating hosts: host: %s, file %s does not have execute permissions", value.Hostname, initdbFilePath)
 
 		if !strings.Contains(result.OutputMsg, expectedOut) {
@@ -137,7 +135,7 @@ func TestEnvValidation(t *testing.T) {
 		}
 	})
 
-	/*t.Run("when data directory is not empty and --force is given for gp init command", func(t *testing.T) {
+	t.Run("when data directory is not empty and --force is given for gp init command", func(t *testing.T) {
 		var value cli.Segment
 		var ok bool
 
@@ -174,17 +172,17 @@ func TestEnvValidation(t *testing.T) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
 
-		//TO DO - bug id:GPCM-375 with force flag is triggered immediately again initilization fails, below part of code should be  removed once bug is foxed
-		initResult, err := testutils.RunInitCluster("--force", configFile)
+		//FIXME - with force flag is triggered immediately again initilization fails, below part of code should be enabled once bug is fixed
+		// initResult, err := testutils.RunInitCluster("--force", configFile)
 
-		if err != nil {
-			t.Errorf("Error while intializing cluster: %#v", err)
-		}
+		// if err != nil {
+		// 	t.Errorf("Error while intializing cluster: %#v", err)
+		// }
 
-		clusterExpectedOut := "[INFO]:-Cluster initialized successfully"
-		if !strings.Contains(result.OutputMsg, expectedOut) {
-			t.Errorf("got %q, want %q", initResult.OutputMsg, clusterExpectedOut)
-		}
+		// clusterExpectedOut := "[INFO]:-Cluster initialized successfully"
+		// if !strings.Contains(result.OutputMsg, expectedOut) {
+		// 	t.Errorf("got %q, want %q", initResult.OutputMsg, clusterExpectedOut)
+		// }
 
 		_, err = testutils.DeleteCluster()
 		if err != nil {
@@ -193,7 +191,7 @@ func TestEnvValidation(t *testing.T) {
 	})
 
 	t.Run("check if the coordinator is stopped whenever an error occurs", func(t *testing.T) {
-		var valueSeg []cli.Segment
+		var valueSegPair []cli.SegmentPair
 		var okSeg bool
 		var value cli.Segment
 		var ok bool
@@ -206,19 +204,19 @@ func TestEnvValidation(t *testing.T) {
 			t.Fatalf("unexpected error: %#v", err)
 		}
 
-		primarySegs := config.Get("primary-segments-array")
-		if valueSeg, okSeg = primarySegs.([]cli.Segment); !okSeg {
-			t.Fatalf("unexpected data type for primary-segments-array %T", valueSeg)
+		primarySegs := config.Get("segment-array")
+		if valueSegPair, okSeg = primarySegs.([]cli.SegmentPair); !okSeg {
+			t.Fatalf("unexpected data type for segment-array %T", valueSegPair)
 		}
 
-		pSegPath := filepath.Join(primarySegs.([]cli.Segment)[0].DataDirectory, "postgresql.conf")
-		host := primarySegs.([]cli.Segment)[0].Hostname
+		pSegPath := filepath.Join(valueSegPair[0].Primary.DataDirectory, "postgresql.conf")
+		host := valueSegPair[0].Primary.Hostname
 		coordinator := config.Get("coordinator")
 
 		if value, ok = coordinator.(cli.Segment); !ok {
 			t.Fatalf("unexpected data type for coordinator %T", value)
 		}
-		coordinatorDD := coordinator.(cli.Segment).DataDirectory
+		coordinatorDD := value.DataDirectory
 
 		dirDeleted := make(chan bool)
 		go func() {
@@ -231,7 +229,7 @@ func TestEnvValidation(t *testing.T) {
 					cmd := exec.Command("ssh", host, cmdStr)
 					output, err := cmd.Output()
 					if err != nil {
-						t.Error(fmt.Sprintf("unexpected error: %#v", err))
+						t.Errorf("unexpected error: %#v", err)
 					}
 
 					if strings.TrimSpace(string(output)) == "exists" {
@@ -239,7 +237,7 @@ func TestEnvValidation(t *testing.T) {
 						cmd := exec.Command("ssh", host, cmdStr)
 						_, err := cmd.CombinedOutput()
 						if err != nil {
-							t.Error(fmt.Sprintf("unexpected error: %#v", err))
+							t.Errorf("unexpected error: %#v", err)
 						}
 						dirDeleted <- true
 					}
@@ -253,10 +251,12 @@ func TestEnvValidation(t *testing.T) {
 			t.Fatalf("got %v, want exit status 1", err)
 		}
 
-		cmdName := "pg_ctl"
-		cmdArgs := []string{"status", "-D", coordinatorDD}
-		cmd := exec.Command(cmdName, cmdArgs...)
+		// check if the coordinator is stopped
+		cmd := exec.Command("pg_ctl", "status", "-D", coordinatorDD)
 		cmdOuput, err := cmd.CombinedOutput()
+		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 3 {
+			t.Fatalf("got %s, %v, want exit status 3", cmdOuput, err)
+		}
 
 		expectedOut := "pg_ctl: no server running"
 		if !strings.Contains(string(cmdOuput), expectedOut) {
@@ -264,14 +264,13 @@ func TestEnvValidation(t *testing.T) {
 		}
 
 		_, initClusterErr := testutils.RunInitCluster("--force", configFile)
-		if err != nil {
-			t.Fatalf("Error while intializing cluster: %#v", initClusterErr)
+		if initClusterErr != nil {
+			t.Fatalf("Error while intializing cluster: %v", initClusterErr)
 		}
 
 		_, err = testutils.DeleteCluster()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-
-	})*/
+	})
 }

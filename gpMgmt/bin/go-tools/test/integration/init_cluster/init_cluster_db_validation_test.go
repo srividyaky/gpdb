@@ -2,7 +2,6 @@ package init_cluster
 
 import (
 	"fmt"
-	"math/rand"
 	"os/exec"
 	"path/filepath"
 	"reflect"
@@ -22,7 +21,7 @@ func TestLocaleValidation(t *testing.T) {
 	localTypes := []string{"LC_COLLATE", "LC_CTYPE", "LC_MESSAGES", "LC_MONETARY", "LC_NUMERIC", "LC_TIME"}
 
 	t.Run("when LC_ALL is given, it sets the locale for all the types", func(t *testing.T) {
-		expected := getRandomLocale(t)
+		expected := testutils.GetRandomLocale(t)
 
 		configFile := testutils.GetTempFile(t, "config.json")
 		SetConfigKey(t, configFile, "locale", cli.Locale{
@@ -45,8 +44,8 @@ func TestLocaleValidation(t *testing.T) {
 	})
 
 	t.Run("individual locale type takes precedence over LC_ALL", func(t *testing.T) {
-		expected := getRandomLocale(t)
-		expectedLcCtype := getRandomLocale(t)
+		expected := testutils.GetRandomLocale(t)
+		expectedLcCtype := testutils.GetRandomLocale(t)
 
 		configFile := testutils.GetTempFile(t, "config.json")
 		SetConfigKey(t, configFile, "locale", cli.Locale{
@@ -89,7 +88,7 @@ func TestLocaleValidation(t *testing.T) {
 		}
 
 		for _, localType := range localTypes {
-			testutils.AssertPgConfig(t, localType, getSystemLocale(t, localType))
+			testutils.AssertPgConfig(t, localType, testutils.GetSystemLocale(t, localType))
 		}
 
 		_, err = testutils.DeleteCluster()
@@ -109,7 +108,6 @@ func TestLocaleValidation(t *testing.T) {
 			t.Fatalf("got %v, want exit status 1", err)
 		}
 
-		//expectedOut := `\[ERROR\]:-host: (\S+), locale value 'invalid.locale' is not a valid locale`
 		expectedOut := `\[ERROR\]:-validating hosts: host: (\S+), locale value 'invalid.locale' is not a valid locale`
 
 		match, err := regexp.MatchString(expectedOut, result.OutputMsg)
@@ -242,6 +240,75 @@ func TestPgConfig(t *testing.T) {
 		}
 	})
 
+	t.Run("check if the gp_segment_configuration table has the correct value for mirrors", func(t *testing.T) {
+		var value cli.Segment
+		var ok bool
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultConfig(t)
+
+		err := config.WriteConfigAs(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+
+		coordinator := config.Get("coordinator")
+		if value, ok = coordinator.(cli.Segment); !ok {
+			t.Fatalf("unexpected data type for coordinator %T", value)
+		}
+
+		primarySegs := config.Get("segment-array")
+		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+		if !ok {
+			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
+		}
+
+		var primarySegments []cli.Segment
+
+		for _, segPair := range valueSegPair {
+			primarySegments = append(primarySegments, *segPair.Mirror)
+		}
+
+		result, err := testutils.RunInitCluster(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
+		}
+
+		expectedOut := "[INFO]:-Cluster initialized successfully"
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
+		}
+
+		conn := dbconn.NewDBConnFromEnvironment("postgres")
+		if err := conn.Connect(1); err != nil {
+			t.Fatalf("Error connecting to the database: %v", err)
+		}
+		defer conn.Close()
+
+		segConfigs, err := cluster.GetSegmentConfiguration(conn, false, true)
+		if err != nil {
+			t.Fatalf("Error getting segment configuration: %v", err)
+		}
+
+		resultSegs := make([]cli.Segment, len(segConfigs))
+		for i, seg := range segConfigs {
+			resultSegs[i] = cli.Segment{
+				Hostname:      seg.Hostname,
+				Port:          seg.Port,
+				DataDirectory: seg.DataDir,
+				Address:       seg.Hostname,
+			}
+		}
+
+		if !reflect.DeepEqual(resultSegs, primarySegments) {
+			t.Fatalf("got %+v, want %+v", resultSegs, primarySegments)
+		}
+
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
 	t.Run("initialize cluster with default config and verify default values used correctly", func(t *testing.T) {
 		var expectedOut string
 		configFile := testutils.GetTempFile(t, "config.json")
@@ -325,46 +392,55 @@ func TestCollations(t *testing.T) {
 	})
 }
 
-func getSystemLocale(t *testing.T, localeType string) string {
-	t.Helper()
+func TestDbCreationValidation(t *testing.T) {
+	testDatabaseCreation := func(t *testing.T, dbName string) {
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultConfig(t)
 
-	out, err := exec.Command("locale").CombinedOutput()
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+		err := config.WriteConfigAs(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %#v", err)
+		}
 
-	for _, line := range strings.Fields(string(out)) {
-		if strings.Contains(line, localeType) {
-			value := strings.Split(line, "=")[1]
-			return strings.ReplaceAll(value, "\"", "")
+		SetConfigKey(t, configFile, "db-name", dbName, true)
+
+		InitClusterResult, err := testutils.RunInitCluster(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %s, %v", InitClusterResult.OutputMsg, err)
+		}
+
+		rows := testutils.ExecQuery(t, "", "SELECT datname FROM pg_database")
+		defer rows.Close()
+		foundDB := false
+		for rows.Next() {
+			var db string
+			if err := rows.Scan(&db); err != nil {
+				t.Fatalf("unexpected error scanning result: %v", err)
+			}
+			if db == dbName {
+				foundDB = true
+				break
+			}
+		}
+		if !foundDB {
+			t.Fatalf("Database %s should exist after creating it", dbName)
+		}
+
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
 		}
 	}
 
-	return ""
-}
+	t.Run("validate cluster creation by specifying db name", func(t *testing.T) {
+		testDatabaseCreation(t, "testdb")
+	})
 
-func getRandomLocale(t *testing.T) string {
-	t.Helper()
+	t.Run("validate cluster creation by specifying hyphen in db name", func(t *testing.T) {
+		testDatabaseCreation(t, "test-db")
+	})
 
-	out, err := exec.Command("locale", "-a").CombinedOutput()
-	if err != nil {
-		t.Fatalf("unexpected error: %#v", err)
-	}
-
-	// get only UTF-8 locales to match the default encoding value
-	var locales []string
-	lines := strings.Fields(string(out))
-	for _, line := range lines {
-		if strings.Contains(strings.ToLower(line), "utf") {
-			locales = append(locales, line)
-		}
-	}
-
-	return locales[rand.Intn(len(locales))]
-}
-
-func TestDbNameValidation(t *testing.T) {
-	t.Run("database name provided is created properly", func(t *testing.T) {
+	t.Run("validate default databases creation when no db name is specified", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
 		config := GetDefaultConfig(t)
 
@@ -378,47 +454,26 @@ func TestDbNameValidation(t *testing.T) {
 			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
 		}
 
-		// before creating database
-		targetDBName := "testdb"
-		QueryResult := testutils.ExecQuery(t, "", "SELECT datname from pg_database")
-		for QueryResult.Next() {
-			var dbName string
-			err := QueryResult.Scan(&dbName)
-			if err != nil {
-				t.Fatalf("unexpected error scanning query result: %v", err)
-			}
-			if dbName == targetDBName {
-				t.Fatalf("Database '%s' should not exist before creating it", targetDBName)
-			}
-		}
+		foundDBs := make(map[string]bool)
 
-		//delete clutser and create it again with dbname specified
-		_, err = testutils.DeleteCluster()
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		SetConfigKey(t, configFile, "db-name", targetDBName, true)
-		InitClusterResult, error := testutils.RunInitCluster(configFile)
-		if err != nil {
-			t.Fatalf("unexpected error: %s, %v", InitClusterResult.OutputMsg, error)
-		}
-
-		// after creating db
-		foundDB := false
 		rows := testutils.ExecQuery(t, "", "SELECT datname from pg_database")
 		for rows.Next() {
 			var dbName string
-			err := rows.Scan(&dbName)
-			if err != nil {
+			if err := rows.Scan(&dbName); err != nil {
 				t.Fatalf("unexpected error scanning result: %v", err)
 			}
-			if dbName == targetDBName {
-				foundDB = true
+			foundDBs[dbName] = true
+		}
+
+		expectedDBs := []string{"postgres", "template1", "template0"}
+		for _, db := range expectedDBs {
+			if !foundDBs[db] {
+				t.Fatalf("Default database %s should exist after creating it", db)
 			}
 		}
-		if !foundDB {
-			t.Fatalf("Database %v should exist after creating it", targetDBName)
+
+		if len(foundDBs) != len(expectedDBs) {
+			t.Fatalf("Unexpected number of databases found: expected %d, found %d", len(expectedDBs), len(foundDBs))
 		}
 
 		_, err = testutils.DeleteCluster()
@@ -426,6 +481,7 @@ func TestDbNameValidation(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+
 }
 
 func TestGpToolKitValidation(t *testing.T) {
@@ -453,6 +509,7 @@ func TestGpToolKitValidation(t *testing.T) {
 			}
 			if extName == "gp_toolkit" {
 				foundGpToolkit = true
+				break
 			}
 		}
 
@@ -469,7 +526,7 @@ func TestGpToolKitValidation(t *testing.T) {
 }
 
 func TestPgHbaConfValidation(t *testing.T) {
-	/* Bug:concurse is failing to resolve ip to hostname*/
+	/* FIXME:concurse is failing to resolve ip to hostname*/
 	/*t.Run("pghba config file validation when hbahostname is true", func(t *testing.T) {
 		var value cli.Segment
 		var ok bool
@@ -626,4 +683,63 @@ func TestPgHbaConfValidation(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+	t.Run("pg_hba.conf replication entry validation in mirror segment", func(t *testing.T) {
+		var ok bool
+
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultConfig(t)
+
+		err := config.WriteConfigAs(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+
+		SetConfigKey(t, configFile, "hba-hostnames", false, true)
+
+		result, err := testutils.RunInitCluster(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
+		}
+
+		primarySegs := config.Get("segment-array")
+		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+
+		if !ok {
+			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
+		}
+
+		filePathSeg := filepath.Join(valueSegPair[0].Mirror.DataDirectory, "pg_hba.conf")
+		hostSegValue := valueSegPair[0].Mirror.Hostname
+		cmdStrSegValue := "whoami"
+		cmdSegvalue := exec.Command("ssh", hostSegValue, cmdStrSegValue)
+		outputSeg, errSeg := cmdSegvalue.Output()
+		if errSeg != nil {
+			t.Fatalf("unexpected error : %v", errSeg)
+		}
+		resultSeg := strings.TrimSpace(string(outputSeg))
+
+		primaryHostName := valueSegPair[0].Primary.Hostname
+		cmdStrSeg := "ip -4 addr show | grep inet | grep -v 127.0.0.1/8 | awk '{print $2}'"
+		cmdSegValueNew := exec.Command("ssh", primaryHostName, cmdStrSeg)
+		outputSegNew, err := cmdSegValueNew.Output()
+		if err != nil {
+			t.Fatalf("unexpected error : %v", err)
+		}
+
+		resultSegValue := string(outputSegNew)
+		firstValueNew := strings.Split(resultSegValue, "\n")[0]
+		pgHbaLineNew := fmt.Sprintf("host\treplication\t%s\t%s\ttrust", resultSeg, firstValueNew)
+		cmdStrSegNew := fmt.Sprintf("/bin/bash -c 'cat %s | grep \"%s\"'", filePathSeg, pgHbaLineNew)
+		cmdSegNew := exec.Command("ssh", hostSegValue, cmdStrSegNew)
+		_, err = cmdSegNew.CombinedOutput()
+		if err != nil {
+			t.Fatalf("unexpected error : %v", err)
+		}
+
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
 }
