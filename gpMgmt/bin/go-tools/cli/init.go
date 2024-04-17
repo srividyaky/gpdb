@@ -191,19 +191,19 @@ func LoadInputConfigToIdlFn(inputConfigFile string, cliHandler *viper.Viper, for
 		}
 
 		// Check for multi-home
-		isMultHome, NameAddressMap, AddressNameMap, err := IsMultiHome(config.HostList)
+		isMultiHome, NameAddressMap, AddressNameMap, err := IsMultiHome(config.HostList)
 		if err != nil {
 			gplog.Error("multihome detection failed, error: %v", err)
 			return &idl.MakeClusterRequest{}, err
 		}
-		if isMultHome {
-			isValidMutliHomeConfig, err := ValidateMultiHomeConfig(config, NameAddressMap)
-			if !isValidMutliHomeConfig {
+		if isMultiHome {
+			isValidMultiHomeConfig, err := ValidateMultiHomeConfig(config, NameAddressMap)
+			if !isValidMultiHomeConfig {
 				return &idl.MakeClusterRequest{}, err
 			}
 		}
 		//Expand details to config for primary
-		segmentPairArray := ExpandSegPairArray(config, isMultHome, NameAddressMap, AddressNameMap)
+		segmentPairArray := ExpandSegPairArray(config, isMultiHome, NameAddressMap, AddressNameMap)
 		config.SegmentArray = segmentPairArray
 		// TODO to print expanded configuration here for user reference and print to file if required
 	}
