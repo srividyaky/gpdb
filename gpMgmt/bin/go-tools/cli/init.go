@@ -225,7 +225,7 @@ func ValidateMultiHomeConfig(config InitConfig, addressMap map[string][]string) 
 		index++
 	}
 	// the number of directories per host is in multiple of number of addresses per host
-	if (addressLengthList[0] < len(config.PrimaryDataDirectories)) && (addressLengthList[0]%len(config.PrimaryDataDirectories)) != 0 {
+	if (addressLengthList[0] < len(config.PrimaryDataDirectories)) && len(config.PrimaryDataDirectories)%(addressLengthList[0]) != 0 {
 		return false, fmt.Errorf("multi-host setup must have data-directories in multiple of number of addresses or more. "+
 			"Number of data-directories:%d and number of addresses per host: %d", len(config.PrimaryDataDirectories), addressLengthList[0])
 	}
