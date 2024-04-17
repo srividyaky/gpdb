@@ -109,7 +109,7 @@ func TestInputFileValidation(t *testing.T) {
 			t.Fatalf("got %v, want exit status 1", err)
 		}
 
-		expectedOut := "[ERROR]:-no coordinator segment provided in input config file"
+		expectedOut := "[ERROR]:-no coordinator segments are provided in input config file"
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Errorf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
