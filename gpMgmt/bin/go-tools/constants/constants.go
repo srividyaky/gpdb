@@ -20,6 +20,9 @@ const (
 	ReplicationSlotName = "internal_wal_replication_slot"
 	DefaultStartTimeout = 600
 	DefaultPostgresLogDir = "log"
+	DefaultSegName      = "gpseg"
+	GroupMirroring      = "group"
+	SpreadMirroring     = "spread"
 )
 
 // gp_segment_configuration specific constants
@@ -31,6 +34,5 @@ const (
 // Catalog tables
 const (
 	GpSegmentConfiguration = "gp_segment_configuration"
-	GroupMirroringStr   = "group"
-	SpreadMirroringStr  = "spread"
+
 )
