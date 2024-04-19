@@ -29,6 +29,7 @@ func TestServer_GetAllHostNames(t *testing.T) {
 		"gpHome",
 		credentials,
 	}
+
 	t.Run("returns error when fails to load client credentials", func(t *testing.T) {
 		testStr := "test error"
 		dialer := func(ctx context.Context, address string) (net.Conn, error) {
@@ -39,11 +40,10 @@ func TestServer_GetAllHostNames(t *testing.T) {
 		}
 		hubServer := hub.New(hubConfig, dialer)
 		request := idl.GetAllHostNamesRequest{HostList: []string{"sdw1", "sdw2"}}
-		_, err := hubServer.GetAllHostNames(context.Background(), &request)
 
+		_, err := hubServer.GetAllHostNames(context.Background(), &request)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
 			t.Fatalf("Got:%v, expected:%s", err, testStr)
 		}
-
 	})
 }

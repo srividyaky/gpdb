@@ -3,8 +3,9 @@ package hub
 import (
 	"context"
 	"fmt"
-	"github.com/greenplum-db/gpdb/gp/utils"
 	"sync"
+
+	"github.com/greenplum-db/gpdb/gp/utils"
 
 	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"github.com/greenplum-db/gpdb/gp/idl"
@@ -50,6 +51,7 @@ func (s *Server) ConnectHostList(hostList []string) (map[string]idl.AgentClient,
 			addressConnectionMap[address] = idl.NewAgentClient(conn)
 		}
 	}
+
 	return addressConnectionMap, nil
 }
 func (s *Server) GetAllHostNames(ctx context.Context, request *idl.GetAllHostNamesRequest) (*idl.GetAllHostNamesReply, error) {
@@ -58,6 +60,7 @@ func (s *Server) GetAllHostNames(ctx context.Context, request *idl.GetAllHostNam
 	if err != nil {
 		return nil, err
 	}
+
 	var wg sync.WaitGroup
 	errs := make(chan error, len(addressConnectionMap))
 	replies := make(chan RpcReply, len(addressConnectionMap))
