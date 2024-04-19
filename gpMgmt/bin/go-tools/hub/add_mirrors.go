@@ -47,14 +47,6 @@ func (s *Server) AddMirrors(req *idl.AddMirrorsRequest, stream idl.Hub_AddMirror
 		return utils.LogAndReturnError(fmt.Errorf("cannot add mirrors, the cluster is already configured with mirrors"))
 	}
 
-	// Validate the heap_checksum value across all the segments
-	hubStream.StreamLogMsg("Checking if the value of data_checksums is consistent across the cluster")
-	err = s.ValidateDataChecksums(gparray)
-	if err != nil {
-		return utils.LogAndReturnError(err)
-	}
-	hubStream.StreamLogMsg("data_checksums value is consistent across the cluster")
-
 	// Register the mirrors to the gp_segment_configuration
 	hubStream.StreamLogMsg("Starting to register mirror segments with the coordinator")
 	err = greenplum.RegisterMirrorSegments(req.Mirrors, conn)

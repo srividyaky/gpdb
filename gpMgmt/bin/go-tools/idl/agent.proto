@@ -15,7 +15,6 @@ service Agent {
     rpc UpdatePgHbaConfAndReload(UpdatePgHbaConfRequest) returns (UpdatePgHbaConfResponse) {}
     rpc UpdatePgConf(UpdatePgConfRequest) returns (UpdatePgConfRespoonse) {}
     rpc PgBasebackup(PgBasebackupRequest) returns (PgBasebackupResponse) {}
-    rpc PgControlData(PgControlDataRequest) returns (PgControlDataResponse) {}
 }
 
 message StartSegmentRequest{
@@ -99,12 +98,3 @@ message PgBasebackupRequest {
 }
 
 message PgBasebackupResponse {}
-
-message PgControlDataRequest {
-    string pgdata = 1;
-    repeated string params = 2;
-}
-
-message PgControlDataResponse {
-    map<string, string> result = 1;
-}

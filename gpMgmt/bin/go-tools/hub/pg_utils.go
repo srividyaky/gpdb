@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/greenplum-db/gpdb/gp/idl"
-	"github.com/greenplum-db/gpdb/gp/utils"
 	"github.com/greenplum-db/gpdb/gp/utils/greenplum"
 )
 
@@ -101,91 +100,4 @@ func (s *Server) GetInterfaceAddrs(host string) ([]string, error) {
 	err := ExecuteRPC(conns, request)
 
 	return addrs, err
-}
-
-// ValidateDataChecksums validates the data page checksum version for all segments in the Greenplum cluster.
-// It compares the data page checksum version of each segment with the coordinator's data page checksum version.
-// If any segment has a different data page checksum version, an error is returned.
-func (s *Server) ValidateDataChecksums(gparray *greenplum.GpArray) error {
-	var coordinatorValue string
-	request := func(conn *Connection) error {
-		if conn.Hostname == gparray.Coordinator.Hostname {
-			resp, err := conn.AgentClient.PgControlData(context.Background(), &idl.PgControlDataRequest{
-				Pgdata: gparray.Coordinator.DataDir,
-				Params: []string{"Data page checksum version"},
-			})
-			if err != nil {
-				return utils.FormatGrpcError(err)
-			}
-
-			coordinatorValue = resp.Result["Data page checksum version"]
-			return nil
-		}
-
-		return nil
-	}
-
-	err := ExecuteRPC(s.Conns, request)
-	if err != nil {
-		return err
-	}
-
-	segmentDataChecksum := make(map[int]string)
-	segmentDataChecksumMutex := sync.RWMutex{}
-	hostToSegMap := gparray.GetSegmentsByHost()
-	request = func(conn *Connection) error {
-		var wg sync.WaitGroup
-
-		segs := hostToSegMap[conn.Hostname]
-		errs := make(chan error, len(segs))
-		for _, seg := range segs {
-			seg := seg
-			wg.Add(1)
-
-			go func(seg *greenplum.Segment) {
-				defer wg.Done()
-
-				resp, err := conn.AgentClient.PgControlData(context.Background(), &idl.PgControlDataRequest{
-					Pgdata: seg.DataDir,
-					Params: []string{"Data page checksum version"},
-				})
-				if err != nil {
-					errs <- utils.FormatGrpcError(err)
-					return
-				}
-
-				segmentDataChecksumMutex.Lock()
-				segmentDataChecksum[seg.Dbid] = resp.Result["Data page checksum version"]
-				segmentDataChecksumMutex.Unlock()
-			}(&seg)
-		}
-
-		wg.Wait()
-		close(errs)
-
-		var err error
-		for e := range errs {
-			err = errors.Join(err, e)
-		}
-
-		return err
-	}
-
-	err = ExecuteRPC(s.Conns, request)
-	if err != nil {
-		return err
-	}
-
-	var inconsistentSegs []int
-	for key, value := range segmentDataChecksum {
-		if value != coordinatorValue {
-			inconsistentSegs = append(inconsistentSegs, key)
-		}
-	}
-
-	if len(inconsistentSegs) != 0 {
-		return fmt.Errorf("data page checksum version for segments with dbid %+v does not match the coordinator value of %s", inconsistentSegs, coordinatorValue)
-	}
-
-	return nil
 }

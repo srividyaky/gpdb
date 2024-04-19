@@ -96,26 +96,6 @@ func (mr *MockAgentClientMockRecorder) PgBasebackup(ctx, in interface{}, opts ..
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PgBasebackup", reflect.TypeOf((*MockAgentClient)(nil).PgBasebackup), varargs...)
 }
 
-// PgControlData mocks base method.
-func (m *MockAgentClient) PgControlData(ctx context.Context, in *idl.PgControlDataRequest, opts ...grpc.CallOption) (*idl.PgControlDataResponse, error) {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, in}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "PgControlData", varargs...)
-	ret0, _ := ret[0].(*idl.PgControlDataResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PgControlData indicates an expected call of PgControlData.
-func (mr *MockAgentClientMockRecorder) PgControlData(ctx, in interface{}, opts ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, in}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PgControlData", reflect.TypeOf((*MockAgentClient)(nil).PgControlData), varargs...)
-}
-
 // StartSegment mocks base method.
 func (m *MockAgentClient) StartSegment(ctx context.Context, in *idl.StartSegmentRequest, opts ...grpc.CallOption) (*idl.StartSegmentReply, error) {
 	m.ctrl.T.Helper()
@@ -302,21 +282,6 @@ func (m *MockAgentServer) PgBasebackup(arg0 context.Context, arg1 *idl.PgBasebac
 func (mr *MockAgentServerMockRecorder) PgBasebackup(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PgBasebackup", reflect.TypeOf((*MockAgentServer)(nil).PgBasebackup), arg0, arg1)
-}
-
-// PgControlData mocks base method.
-func (m *MockAgentServer) PgControlData(arg0 context.Context, arg1 *idl.PgControlDataRequest) (*idl.PgControlDataResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PgControlData", arg0, arg1)
-	ret0, _ := ret[0].(*idl.PgControlDataResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PgControlData indicates an expected call of PgControlData.
-func (mr *MockAgentServerMockRecorder) PgControlData(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PgControlData", reflect.TypeOf((*MockAgentServer)(nil).PgControlData), arg0, arg1)
 }
 
 // StartSegment mocks base method.

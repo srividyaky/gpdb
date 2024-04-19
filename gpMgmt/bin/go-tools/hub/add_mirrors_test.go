@@ -553,9 +553,6 @@ func TestAddMirrors(t *testing.T) {
 	expectedErr := errors.New("error")
 	cases := []ErrorType{
 		{
-			PgControlData: expectedErr,
-		},
-		{
 			PgBasebackup: expectedErr,
 		},
 		{
@@ -646,7 +643,6 @@ func createSegment(t *testing.T, dbid int, content int, role string, preferredRo
 }
 
 type ErrorType struct {
-	PgControlData   error
 	PgBasebackup    error
 	UpdatePgConf    error
 	StartSegment    error
@@ -660,15 +656,11 @@ func createMockClients(t *testing.T, ctrl *gomock.Controller, errorType ErrorTyp
 	sdw1 := mock_idl.NewMockAgentClient(ctrl)
 	sdw2 := mock_idl.NewMockAgentClient(ctrl)
 
-	cdw.EXPECT().PgControlData(gomock.Any(), gomock.Any()).Return(&idl.PgControlDataResponse{Result: map[string]string{"Data page checksum version": "1"}}, nil).AnyTimes()
-
-	sdw1.EXPECT().PgControlData(gomock.Any(), gomock.Any()).Return(&idl.PgControlDataResponse{Result: map[string]string{"Data page checksum version": "1"}}, errorType.PgControlData).AnyTimes()
 	sdw1.EXPECT().PgBasebackup(gomock.Any(), gomock.Any()).Return(nil, errorType.PgBasebackup).AnyTimes()
 	sdw1.EXPECT().UpdatePgConf(gomock.Any(), gomock.Any()).Return(nil, errorType.UpdatePgConf).AnyTimes()
 	sdw1.EXPECT().StartSegment(gomock.Any(), gomock.Any()).Return(nil, errorType.StartSegment).AnyTimes()
 	sdw1.EXPECT().UpdatePgHbaConfAndReload(gomock.Any(), gomock.Any()).Return(nil, errorType.UpdatePgHbaConf).AnyTimes()
 
-	sdw2.EXPECT().PgControlData(gomock.Any(), gomock.Any()).Return(&idl.PgControlDataResponse{Result: map[string]string{"Data page checksum version": "1"}}, nil).AnyTimes()
 	sdw2.EXPECT().PgBasebackup(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	sdw2.EXPECT().UpdatePgConf(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	sdw2.EXPECT().StartSegment(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
