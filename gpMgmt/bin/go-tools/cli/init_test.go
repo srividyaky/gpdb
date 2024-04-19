@@ -35,6 +35,28 @@ func TestMain(m *testing.M) {
 	os.Exit(exectest.Run(m))
 }
 
+func TestValidateStringArray(t *testing.T) {
+	setupTest(t)
+	defer teardownTest()
+	t.Run("returns true when a valid array is provided", func(t *testing.T) {
+		input := []string{"test1", "test2"}
+
+		result := cli.ValidateStringArray(input)
+		if !result {
+			t.Fatalf("Got:%v, expected: true", result)
+		}
+	})
+
+	t.Run("returns false when a invalid array is provided", func(t *testing.T) {
+		input := []string{"test1", "test2", ""}
+
+		result := cli.ValidateStringArray(input)
+		if result {
+			t.Fatalf("Got:%v, expected: true", result)
+		}
+	})
+}
+
 func TestValidateMultiHomeConfig(t *testing.T) {
 	setupTest(t)
 	defer teardownTest()
@@ -53,6 +75,7 @@ func TestValidateMultiHomeConfig(t *testing.T) {
 			t.Fatalf("Got:%v, Want: %s", err, testStr)
 		}
 	})
+
 	t.Run("returns error when the directories per host are not in multiple of number of interfaces", func(t *testing.T) {
 		testStr := "multi-host setup must have data-directories in multiple of number of addresses or more."
 		config := cli.InitConfig{PrimaryDataDirectories: []string{"/tmp", "/tmp", "/tmp"}}
@@ -68,6 +91,7 @@ func TestValidateMultiHomeConfig(t *testing.T) {
 			t.Fatalf("Got:%v, Want: %s", err, testStr)
 		}
 	})
+
 	t.Run("returns error when spread mirroring and number of unique hosts is lesser", func(t *testing.T) {
 		testStr := "to enable spread mirroring, number of hosts should be more than number of primary segments per host."
 		config := cli.InitConfig{PrimaryDataDirectories: []string{"/tmp", "/tmp", "/tmp", "/tmp"},
@@ -91,33 +115,102 @@ func TestValidateMultiHomeConfig(t *testing.T) {
 func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 	setupTest(t)
 	defer teardownTest()
+
 	t.Run("returns error when primary data directories not provided", func(t *testing.T) {
 		testStr := "primary-data-directories not specified. Please specify primary-data-directories to continue"
 		cliHandle := viper.New()
 		config := &cli.InitConfig{}
+
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
 			t.Fatalf("Got:%v, Expected:%s", err, testStr)
 		}
 	})
+
 	t.Run("returns error when hostlist not provided", func(t *testing.T) {
 		testStr := "hostlist not specified. Please specify hostlist to continue"
 		cliHandle := viper.New()
 		cliHandle.Set("primary-data-directories", []string{"/test"})
 		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}}
+
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
 			t.Fatalf("Got:%v, Expected:%s", err, testStr)
 		}
 	})
+
+	t.Run("returns error when primary data directory contains empty string", func(t *testing.T) {
+		testStr := "empty primary-data-directories entry provided, please provide valid directory"
+		cliHandle := viper.New()
+		cliHandle.Set("primary-data-directories", []string{""})
+		config := &cli.InitConfig{PrimaryDataDirectories: []string{""}}
+
+		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
+		if err == nil || !strings.Contains(err.Error(), testStr) {
+			t.Fatalf("Got:%v, Expected:%s", err, testStr)
+		}
+	})
+
+	t.Run("returns error when primary data directory contains empty and non-empty string", func(t *testing.T) {
+		testStr := "empty primary-data-directories entry provided, please provide valid directory"
+		cliHandle := viper.New()
+		cliHandle.Set("primary-data-directories", []string{"/test1", "", "/test2"})
+		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test1", "", "/test2"}}
+
+		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
+		if err == nil || !strings.Contains(err.Error(), testStr) {
+			t.Fatalf("Got:%v, Expected:%s", err, testStr)
+		}
+	})
+
+	t.Run("returns error when hostlist contains empty string", func(t *testing.T) {
+		testStr := "empty hostlist entry detected, Please provide valid hostlist"
+		cliHandle := viper.New()
+		cliHandle.Set("primary-data-directories", []string{"/test"})
+		cliHandle.Set("hostlist", []string{""})
+		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{""}}
+
+		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
+		if err == nil || !strings.Contains(err.Error(), testStr) {
+			t.Fatalf("Got:%v, Expected:%s", err, testStr)
+		}
+	})
+
+	t.Run("returns error when hostlist contains empty and non-empty string", func(t *testing.T) {
+		testStr := "empty hostlist entry detected, Please provide valid hostlist"
+		cliHandle := viper.New()
+		cliHandle.Set("primary-data-directories", []string{"/test"})
+		cliHandle.Set("hostlist", []string{"/tmp/1", "", "/tmp/2"})
+		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"/tmp/1", "", "/tmp/2"}}
+
+		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
+		if err == nil || !strings.Contains(err.Error(), testStr) {
+			t.Fatalf("Got:%v, Expected:%s", err, testStr)
+		}
+	})
+	t.Run("returns error when primary base port value is same as coordinator port", func(t *testing.T) {
+		testStr := "coordinator port and primary-base-port value cannot be same"
+		cliHandle := viper.New()
+		basePort := 9000
+		cliHandle.Set("primary-data-directories", []string{"/test"})
+		cliHandle.Set("hostlist", []string{"swd1"})
+		cliHandle.Set("primary-base-port", basePort)
+		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort}, PrimaryBasePort: basePort}
+
+		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
+		if err == nil || !strings.Contains(err.Error(), testStr) {
+			t.Fatalf("Got:%v, Expected:%s", err, testStr)
+		}
+	})
+
 	t.Run("sets ContainsMirror to false and default value to primary base port", func(t *testing.T) {
 		cliHandle := viper.New()
 		basePort := 9000
 		expectedPrimaryPort := basePort + 2
 		cliHandle.Set("primary-data-directories", []string{"/test"})
 		cliHandle.Set("hostlist", []string{"swd1"})
-
 		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort}}
+
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err != nil {
 			t.Fatalf("Got:%v, Expected no error", err)
@@ -129,13 +222,13 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 			t.Fatalf("PrimaryBasePort got:%v, expected:false", cli.ContainsMirror)
 		}
 	})
+
 	t.Run("returns error when segment array is defined and expansion parameters also present", func(t *testing.T) {
 		testStr := "cannot specify segments-array and primary-base-directories together"
 		cliHandle := viper.New()
 		basePort := 9000
 		segArray := []cli.SegmentPair{{Primary: &cli.Segment{Hostname: "sdw1"}}}
 		cliHandle.Set("segment-array", segArray)
-
 		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort},
 			SegmentArray: segArray}
 
@@ -154,11 +247,13 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		cliHandle.Set("mirror-base-port", basePort)
 		cliHandle.Set("primary-data-directories", []string{"/test"})
 		cliHandle.Set("hostlist", []string{"swd1"})
+
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
 			t.Fatalf("Got:%v, Expected:%s", err, testStr)
 		}
 	})
+
 	t.Run("returns error when mirror data directories count not equal to primary data directories", func(t *testing.T) {
 		testStr := "number of primary-data-directories should be equal to number of mirror-data-directories"
 		cliHandle := viper.New()
@@ -168,11 +263,13 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		cliHandle.Set("mirror-base-port", basePort)
 		cliHandle.Set("primary-data-directories", []string{"/test"})
 		cliHandle.Set("hostlist", []string{"swd1"})
+
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
 			t.Fatalf("Got:%v, Expected:%s", err, testStr)
 		}
 	})
+
 	t.Run("returns error when unknown mirroring type provided", func(t *testing.T) {
 		testStr := "invalid mirroring-Type: unknown. Valid options are 'group' and 'spread'"
 		cliHandle := viper.New()
@@ -183,13 +280,14 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		cliHandle.Set("primary-data-directories", []string{"/test"})
 		cliHandle.Set("hostlist", []string{"swd1"})
 		cliHandle.Set("mirroring-type", "Unknown")
+
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
 			t.Fatalf("Got:%v, Expected:%s", err, testStr)
 		}
 	})
+
 	t.Run("sets default mirror port value properly", func(t *testing.T) {
-		//testStr := "is not supported. Only 'group' or 'spread' mirroring is supported"
 		cliHandle := viper.New()
 		basePort := 9000
 		expectedMirrorPort := basePort + 1002
@@ -197,6 +295,7 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		cliHandle.Set("mirroring-type", constants.GroupMirroring)
 		cliHandle.Set("primary-data-directories", []string{"/test"})
 		cliHandle.Set("hostlist", []string{"swd1"})
+
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err != nil {
 			t.Fatalf("Got:%v, Expected no error", err)
@@ -205,6 +304,24 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 			t.Fatalf("mirror-base-port Got:%d, Expected:%d", config.MirrorBasePort, expectedMirrorPort)
 		}
 	})
+
+	t.Run("sets default mirror port value properly", func(t *testing.T) {
+		testStr := "coordinator port and mirror-base-port value cannot be same. Please provide different values"
+		cliHandle := viper.New()
+		basePort := 9000
+		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test"}, HostList: []string{"swd1"}, Coordinator: cli.Segment{Port: basePort},
+			MirrorDataDirectories: []string{"/test1"}, MirroringType: constants.GroupMirroring, MirrorBasePort: basePort}
+		cliHandle.Set("mirroring-type", constants.GroupMirroring)
+		cliHandle.Set("primary-data-directories", []string{"/test"})
+		cliHandle.Set("hostlist", []string{"swd1"})
+		cliHandle.Set("mirror-base-port", basePort)
+
+		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
+		if err == nil || !strings.Contains(err.Error(), testStr) {
+			t.Fatalf("Got:%v, Expected:%s", err, testStr)
+		}
+	})
+
 	t.Run("sets default mirroring type value properly", func(t *testing.T) {
 		cliHandle := viper.New()
 		basePort := 9000
@@ -213,6 +330,7 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		cliHandle.Set("mirror-base-port", basePort)
 		cliHandle.Set("primary-data-directories", []string{"/test"})
 		cliHandle.Set("hostlist", []string{"swd1"})
+
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err != nil {
 			t.Fatalf("Got:%v, Expected no error", err)
@@ -221,6 +339,7 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 			t.Fatalf("mirroring-typet Got:%s, Expected:%s", config.MirroringType, expectedMirroringType)
 		}
 	})
+
 	t.Run("returns error when number of hosts are less in spread mirroring", func(t *testing.T) {
 		testStr := "To enable spread mirroring, number of hosts should be more than number of primary segments per host."
 		cliHandle := viper.New()
@@ -229,6 +348,7 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		cliHandle.Set("mirroring-type", constants.SpreadMirroring)
 		cliHandle.Set("primary-data-directories", []string{"/test"})
 		cliHandle.Set("hostlist", []string{"swd1"})
+
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {
 			t.Fatalf("Got:%v, Expected:%s", err, testStr)
@@ -283,6 +403,7 @@ func TestIsMultiHome(t *testing.T) {
 			t.Fatalf("isMultihome Failed. Got:%v, Expected: false", isMultiHome)
 		}
 	})
+
 	t.Run("returns true and other details properly when is a multi-home environment", func(t *testing.T) {
 		hostList := []string{"sdw1-1", "sdw1-2", "sdw2-1", "sdw2-2"}
 		expectedAddressNameMap := map[string]string{"sdw1-1": "sdw1", "sdw1-2": "sdw1", "sdw2-1": "sdw2", "sdw2-2": "sdw2"}
@@ -311,6 +432,7 @@ func TestIsMultiHome(t *testing.T) {
 	})
 }
 
+// CheckIfPortConflict utility function to check if there's a port conflict in the generated segments array
 func CheckIfPortConflict(segPairList *[]cli.SegmentPair) error {
 	var conflictList []int
 	hostPortMap := map[string]map[int]bool{}
@@ -338,9 +460,11 @@ func CheckIfPortConflict(segPairList *[]cli.SegmentPair) error {
 	return fmt.Errorf("port conflict in segPairList at index:%v", conflictList)
 
 }
+
 func TestExpandNonMultiHomePrimaryList(t *testing.T) {
 	setupTest(t)
 	defer teardownTest()
+
 	t.Run("should expand primary array for a non multi home setup", func(t *testing.T) {
 		var segPairList []cli.SegmentPair
 		primaryBasePort := 9000
@@ -353,6 +477,7 @@ func TestExpandNonMultiHomePrimaryList(t *testing.T) {
 			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test/gpseg2"}},
 			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg3"}},
 		}
+
 		segPairList = *cli.ExpandNonMultiHomePrimaryList(&segPairList, primaryBasePort, primaryBaseDataDirectories, hostList, addressNameMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
 			t.Fatalf("Got:%+v Expected %+v", segPairList, expectedSegPairList)
@@ -362,6 +487,7 @@ func TestExpandNonMultiHomePrimaryList(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("should expand primary array for a non multi home setup with different mount-points", func(t *testing.T) {
 		var segPairList []cli.SegmentPair
 		primaryBasePort := 9000
@@ -374,6 +500,7 @@ func TestExpandNonMultiHomePrimaryList(t *testing.T) {
 			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9000, DataDirectory: "/test1/gpseg2"}},
 			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test2/gpseg3"}},
 		}
+
 		segPairList = *cli.ExpandNonMultiHomePrimaryList(&segPairList, primaryBasePort, primaryBaseDataDirectories, hostList, addressNameMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
 			t.Fatalf("Got:%+v Expected %+v", segPairList, expectedSegPairList)
@@ -384,9 +511,11 @@ func TestExpandNonMultiHomePrimaryList(t *testing.T) {
 		}
 	})
 }
+
 func TestExpandMultiHomePrimaryArray(t *testing.T) {
 	setupTest(t)
 	defer teardownTest()
+
 	t.Run("should expand primary array for a multi home setup", func(t *testing.T) {
 		var segPairList []cli.SegmentPair
 		primaryBasePort := 9000
@@ -402,6 +531,7 @@ func TestExpandMultiHomePrimaryArray(t *testing.T) {
 			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test/gpseg2"}},
 			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg3"}},
 		}
+
 		segPairList = *cli.ExpandMultiHomePrimaryArray(&segPairList, primaryBasePort, primaryBaseDataDirectories, uniqHostnameList, nameAddressMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
 			t.Fatalf("Got:%+v Expected %+v", segPairList, expectedSegPairList)
@@ -411,6 +541,7 @@ func TestExpandMultiHomePrimaryArray(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("should expand primary array for a multi home setup multi mount point", func(t *testing.T) {
 		var segPairList []cli.SegmentPair
 		primaryBasePort := 9000
@@ -426,6 +557,7 @@ func TestExpandMultiHomePrimaryArray(t *testing.T) {
 			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-1", Port: 9000, DataDirectory: "/test1/gpseg2"}},
 			{Primary: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test2/gpseg3"}},
 		}
+
 		segPairList = *cli.ExpandMultiHomePrimaryArray(&segPairList, primaryBasePort, primaryBaseDataDirectories, uniqHostnameList, nameAddressMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
 			t.Fatalf("Got:%+v Expected %+v", segPairList, expectedSegPairList)
@@ -436,9 +568,11 @@ func TestExpandMultiHomePrimaryArray(t *testing.T) {
 		}
 	})
 }
+
 func TestExpandNonMultiHomeGroupMirrorList(t *testing.T) {
 	setupTest(t)
 	defer teardownTest()
+
 	t.Run("should expand mirror array for a non multi home setup", func(t *testing.T) {
 		var segPairList []cli.SegmentPair
 
@@ -453,6 +587,7 @@ func TestExpandNonMultiHomeGroupMirrorList(t *testing.T) {
 			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test/gpseg3"}},
 		}
 		segPairList = make([]cli.SegmentPair, 4)
+
 		segPairList = *cli.ExpandNonMultiHomeGroupMirrorList(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, hostList, addressNameMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
 			t.Fatalf("Got:%+v Expected %+v", segPairList, expectedSegPairList)
@@ -462,6 +597,7 @@ func TestExpandNonMultiHomeGroupMirrorList(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("should expand mirror array for a non multi home setup with separate mount", func(t *testing.T) {
 		var segPairList []cli.SegmentPair
 		mirrorBasePort := 9000
@@ -475,6 +611,7 @@ func TestExpandNonMultiHomeGroupMirrorList(t *testing.T) {
 			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1", Port: 9001, DataDirectory: "/test2/gpseg3"}},
 		}
 		segPairList = make([]cli.SegmentPair, 4)
+
 		segPairList = *cli.ExpandNonMultiHomeGroupMirrorList(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, hostList, addressNameMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
 			t.Fatalf("Got:%+v Expected %+v", segPairList, expectedSegPairList)
@@ -485,9 +622,11 @@ func TestExpandNonMultiHomeGroupMirrorList(t *testing.T) {
 		}
 	})
 }
+
 func TestExpandNonMultiHomeSpreadMirrorList(t *testing.T) {
 	setupTest(t)
 	defer teardownTest()
+
 	t.Run("should expand mirror array for a non multi home setup - spread mirroring", func(t *testing.T) {
 		var segPairList []cli.SegmentPair
 		mirrorBasePort := 9000
@@ -503,6 +642,7 @@ func TestExpandNonMultiHomeSpreadMirrorList(t *testing.T) {
 			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test/gpseg5"}},
 		}
 		segPairList = make([]cli.SegmentPair, 6)
+
 		segPairList = *cli.ExpandNonMultiHomeSpreadMirroring(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, hostList, addressNameMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
 			t.Fatalf("Got:%+v Expected %+v", segPairList, expectedSegPairList)
@@ -512,6 +652,7 @@ func TestExpandNonMultiHomeSpreadMirrorList(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("should expand mirror array for a non multi home setup with separate mount - spread mirroring", func(t *testing.T) {
 		var segPairList []cli.SegmentPair
 		mirrorBasePort := 9000
@@ -527,6 +668,7 @@ func TestExpandNonMultiHomeSpreadMirrorList(t *testing.T) {
 			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2", Port: 9001, DataDirectory: "/test2/gpseg5"}},
 		}
 		segPairList = make([]cli.SegmentPair, 6)
+
 		segPairList = *cli.ExpandNonMultiHomeSpreadMirroring(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, hostList, addressNameMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
 			t.Fatalf("Got:%+v Expected %+v", segPairList, expectedSegPairList)
@@ -537,9 +679,11 @@ func TestExpandNonMultiHomeSpreadMirrorList(t *testing.T) {
 		}
 	})
 }
+
 func TestExpandMultiHomeGroupMirrorList(t *testing.T) {
 	setupTest(t)
 	defer teardownTest()
+
 	t.Run("should expand mirror array for a multi home setup - group mirroring", func(t *testing.T) {
 		var segPairList []cli.SegmentPair
 		segPairList = make([]cli.SegmentPair, 4)
@@ -556,6 +700,7 @@ func TestExpandMultiHomeGroupMirrorList(t *testing.T) {
 			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg2"}},
 			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test/gpseg3"}},
 		}
+
 		segPairList = *cli.ExpandMultiHomeGroupMirrorList(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, uniqHostnameList, nameAddressMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
 			t.Fatalf("Got:%+v Expected %+v", segPairList, expectedSegPairList)
@@ -581,6 +726,7 @@ func TestExpandMultiHomeGroupMirrorList(t *testing.T) {
 			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test1/gpseg2"}},
 			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-2", Port: 9001, DataDirectory: "/test2/gpseg3"}},
 		}
+
 		segPairList = *cli.ExpandMultiHomeGroupMirrorList(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, uniqHostnameList, nameAddressMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
 			t.Fatalf("Got:%+v Expected %+v", segPairList, expectedSegPairList)
@@ -594,6 +740,7 @@ func TestExpandMultiHomeGroupMirrorList(t *testing.T) {
 func TestExpandMultiHomeSpreadMirrorList(t *testing.T) {
 	setupTest(t)
 	defer teardownTest()
+
 	t.Run("should expand mirror array for a multi home setup - spread mirroring", func(t *testing.T) {
 		var segPairList []cli.SegmentPair
 		segPairList = make([]cli.SegmentPair, 6)
@@ -613,6 +760,7 @@ func TestExpandMultiHomeSpreadMirrorList(t *testing.T) {
 			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test/gpseg4"}},
 			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test/gpseg5"}},
 		}
+
 		segPairList = *cli.ExpandMultiHomeSpreadMirrorList(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, uniqHostnameList, nameAddressMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
 			t.Fatalf("Got:%+v Expected %+v", segPairList, expectedSegPairList)
@@ -622,6 +770,7 @@ func TestExpandMultiHomeSpreadMirrorList(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("should expand mirror array for a multi home setup - group mirroring with separate mount point", func(t *testing.T) {
 		var segPairList []cli.SegmentPair
 		segPairList = make([]cli.SegmentPair, 6)
@@ -641,6 +790,7 @@ func TestExpandMultiHomeSpreadMirrorList(t *testing.T) {
 			{Mirror: &cli.Segment{Hostname: "sdw1", Address: "sdw1-1", Port: 9000, DataDirectory: "/test1/gpseg4"}},
 			{Mirror: &cli.Segment{Hostname: "sdw2", Address: "sdw2-2", Port: 9001, DataDirectory: "/test2/gpseg5"}},
 		}
+
 		segPairList = *cli.ExpandMultiHomeSpreadMirrorList(&segPairList, mirrorBasePort, mirrorBaseDataDirectories, uniqHostnameList, nameAddressMap)
 		if !reflect.DeepEqual(segPairList, expectedSegPairList) {
 			t.Fatalf("Got:%+v Expected %+v", segPairList, expectedSegPairList)
@@ -654,6 +804,7 @@ func TestExpandMultiHomeSpreadMirrorList(t *testing.T) {
 func TestExpandSegPairArray(t *testing.T) {
 	setupTest(t)
 	defer teardownTest()
+
 	t.Run("returns list of expansion for the given config when contains only primaries non multi-home", func(t *testing.T) {
 		config := cli.InitConfig{
 			PrimaryBasePort:        9000,
@@ -685,6 +836,7 @@ func TestExpandSegPairArray(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("returns list of expansion for the given config when contains only primaries non multi-home different mount points", func(t *testing.T) {
 		config := cli.InitConfig{
 			PrimaryBasePort:        9000,
@@ -716,6 +868,7 @@ func TestExpandSegPairArray(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("returns list of expansion for the given config when contains only primaries non multi-home and given address list", func(t *testing.T) {
 		config := cli.InitConfig{
 			PrimaryBasePort:        9000,
@@ -747,6 +900,7 @@ func TestExpandSegPairArray(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("returns list of expansion for the given config when contains only primaries on a multi-home", func(t *testing.T) {
 		config := cli.InitConfig{
 			PrimaryBasePort:        9000,
@@ -778,6 +932,7 @@ func TestExpandSegPairArray(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("returns list of expansion for the given config when contains only primaries on a multi-home with separate mount point", func(t *testing.T) {
 		config := cli.InitConfig{
 			PrimaryBasePort:        9000,
@@ -847,6 +1002,7 @@ func TestExpandSegPairArray(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("returns list of expansion for the given config contain primary and spread mirrors non multi-home", func(t *testing.T) {
 		config := cli.InitConfig{
 			PrimaryBasePort:        9000,
@@ -886,6 +1042,7 @@ func TestExpandSegPairArray(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("returns list of expansion for the given config contain primary and group mirrors non multi-home separate mount points", func(t *testing.T) {
 		config := cli.InitConfig{
 			PrimaryBasePort:        9000,
@@ -917,6 +1074,7 @@ func TestExpandSegPairArray(t *testing.T) {
 			t.Fatalf("Got:%v, Want:%v", segPairList, expectedSegPairList)
 		}
 	})
+
 	t.Run("returns list of expansion for the given config contain primary and group mirrors non multi-home when given address", func(t *testing.T) {
 		config := cli.InitConfig{
 			PrimaryBasePort:        9000,
@@ -953,6 +1111,7 @@ func TestExpandSegPairArray(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("returns list of expansion for the given config contain primary and spread mirrors non multi-home when given address", func(t *testing.T) {
 		config := cli.InitConfig{
 			PrimaryBasePort:        9000,
@@ -992,6 +1151,7 @@ func TestExpandSegPairArray(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("returns list of expansion for the given config when contains primaries and group mirror on a multi-home", func(t *testing.T) {
 		config := cli.InitConfig{
 			PrimaryBasePort:        9000,
@@ -1027,6 +1187,7 @@ func TestExpandSegPairArray(t *testing.T) {
 			t.Fatalf("Got:%v, expected no error", err)
 		}
 	})
+
 	t.Run("returns list of expansion for the given config when contains primaries and spread mirror on a multi-home", func(t *testing.T) {
 		config := cli.InitConfig{
 			PrimaryBasePort:        9000,
