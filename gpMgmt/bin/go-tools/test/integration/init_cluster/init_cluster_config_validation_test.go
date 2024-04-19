@@ -102,7 +102,21 @@ func TestInputFileValidation(t *testing.T) {
 
 	t.Run("cluster creation fails when input file doesn't have coordinator details", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultConfig(t, true)
+
 		UnsetConfigKey(t, configFile, "coordinator", true)
+
+		configSettings := config.AllSettings()
+
+		// Marshal the settings into JSON format
+		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Print the JSON configuration
+		fmt.Println("Updated configuration:")
+		fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -688,7 +702,7 @@ func TestInputFileValidation(t *testing.T) {
 		config := GetDefaultConfig(t, true)
 
 		configSettings := config.AllSettings()
-		delete(configSettings, "coordinator")
+		//delete(configSettings, "coordinator")
 
 		err := config.WriteConfigAs(configFile)
 		if err != nil {

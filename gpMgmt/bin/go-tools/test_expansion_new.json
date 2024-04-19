@@ -1,0 +1,15 @@
+{
+  "common-config": {},
+  "coordinator-config": {},
+  "hostlist": [
+    "localhost"
+  ],
+  "primary-base-port": 7002,
+  "primary-data-directories": [
+    "/tmp/demo/primary1",
+    "/tmp/demo/primary2",
+    "/tmp/demo/primary3",
+    "/tmp/demo/primary4"
+  ],
+  "segment-config": {}
+}

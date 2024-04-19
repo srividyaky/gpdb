@@ -1,6 +1,7 @@
 package init_cluster
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -146,6 +147,16 @@ func TestEnvValidation(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %#v", err)
 		}
+		configSettings := config.AllSettings()
+
+		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Print the JSON configuration
+		fmt.Println("Updated configuration:")
+		fmt.Println(string(jsonConfig))
 
 		coordinator := config.Get("coordinator")
 		if value, ok = coordinator.(cli.Segment); !ok {

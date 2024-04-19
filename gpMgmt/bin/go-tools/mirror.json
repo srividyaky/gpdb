@@ -1,0 +1,55 @@
+{
+  "common-config": {},
+  "coordinator": {
+    "hostname": "cdw",
+    "address": "cdw",
+    "port": 7000,
+    "data-directory": "/data/qddir/gpseg-1"
+  },
+  "coordinator-config": {},
+  "segment-array": [
+    {
+      "Primary": {
+        "hostname": "sdw1",
+        "address": "sdw1",
+        "port": 7001,
+        "data-directory": "/tmp/demo/0"
+      },
+      "Mirror": {
+        "hostname": "sdw2",
+        "address": "sdw2",
+        "port": 7005,
+        "data-directory": "/tmp/demo/gpmirror1"
+      }
+    },
+    {
+      "Primary": {
+        "hostname": "sdw2",
+        "address": "sdw2",
+        "port": 7002,
+        "data-directory": "/tmp/demo/1"
+      },
+      "Mirror": {
+        "hostname": "sdw3",
+        "address": "sdw3",
+        "port": 7006,
+        "data-directory": "/tmp/demo/gpmirror2"
+      }
+    },
+    {
+      "Primary": {
+        "hostname": "sdw3",
+        "address": "sdw3",
+        "port": 7003,
+        "data-directory": "/tmp/demo/2"
+      },
+      "Mirror": {
+        "hostname": "sdw1",
+        "address": "sdw1",
+        "port": 7007,
+        "data-directory": "/tmp/demo/gpmirror3"
+      }
+    }
+  ],
+  "segment-config": {}
+}
