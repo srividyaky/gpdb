@@ -29,12 +29,22 @@ func TestMain(m *testing.M) {
 		}
 
 		*hostfile = file.Name()
-		err = os.WriteFile(*hostfile, []byte("localhost"), 0777)
+		hostname, err := os.Hostname()
+		if err != nil {
+			fmt.Printf("could not get hostname: %v", err)
+			os.Exit(1)
+		}
+		// err = os.WriteFile(*hostfile, []byte("localhost"), 0777)
+		// if err != nil {
+		// 	fmt.Printf("could not create hostfile: %v, and no hostfile provided", err)
+		// 	os.Exit(1)
+		// }
+
+		err = os.WriteFile(*hostfile, []byte(hostname), 0777)
 		if err != nil {
 			fmt.Printf("could not create hostfile: %v, and no hostfile provided", err)
 			os.Exit(1)
 		}
-
 		coordinatorDatadir = "/tmp/demo/-1"
 	}
 
