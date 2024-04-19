@@ -280,6 +280,75 @@ func TestPgConfig(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+
+	t.Run("check if the gp_segment_configuration table has the correct value for mirrors", func(t *testing.T) {
+		var value cli.Segment
+		var ok bool
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultConfig(t)
+
+		err := config.WriteConfigAs(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+
+		coordinator := config.Get("coordinator")
+		if value, ok = coordinator.(cli.Segment); !ok {
+			t.Fatalf("unexpected data type for coordinator %T", value)
+		}
+
+		primarySegs := config.Get("segment-array")
+		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+		if !ok {
+			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
+		}
+
+		var primarySegments []cli.Segment
+
+		for _, segPair := range valueSegPair {
+			primarySegments = append(primarySegments, *segPair.Mirror)
+		}
+
+		result, err := testutils.RunInitCluster(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
+		}
+
+		expectedOut := "[INFO]:-Cluster initialized successfully"
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
+		}
+
+		conn := dbconn.NewDBConnFromEnvironment("postgres")
+		if err := conn.Connect(1); err != nil {
+			t.Fatalf("Error connecting to the database: %v", err)
+		}
+		defer conn.Close()
+
+		segConfigs, err := cluster.GetSegmentConfiguration(conn, false, true)
+		if err != nil {
+			t.Fatalf("Error getting segment configuration: %v", err)
+		}
+
+		resultSegs := make([]cli.Segment, len(segConfigs))
+		for i, seg := range segConfigs {
+			resultSegs[i] = cli.Segment{
+				Hostname:      seg.Hostname,
+				Port:          seg.Port,
+				DataDirectory: seg.DataDir,
+				Address:       seg.Hostname,
+			}
+		}
+
+		if !reflect.DeepEqual(resultSegs, primarySegments) {
+			t.Fatalf("got %+v, want %+v", resultSegs, primarySegments)
+		}
+
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
 
 func TestCollations(t *testing.T) {
@@ -602,6 +671,65 @@ func TestPgHbaConfValidation(t *testing.T) {
 		resultSegValue := string(outputSegNew)
 		firstValueNew := strings.Split(resultSegValue, "\n")[0]
 		pgHbaLineNew := fmt.Sprintf("host\tall\t%s\t%s\ttrust", resultSeg, firstValueNew)
+		cmdStrSegNew := fmt.Sprintf("/bin/bash -c 'cat %s | grep \"%s\"'", filePathSeg, pgHbaLineNew)
+		cmdSegNew := exec.Command("ssh", hostSegValue, cmdStrSegNew)
+		_, err = cmdSegNew.CombinedOutput()
+		if err != nil {
+			t.Fatalf("unexpected error : %v", err)
+		}
+
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("pg_hba.conf replication entry validation in mirror segment", func(t *testing.T) {
+		var ok bool
+
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultConfig(t)
+
+		err := config.WriteConfigAs(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+
+		SetConfigKey(t, configFile, "hba-hostnames", false, true)
+
+		result, err := testutils.RunInitCluster(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
+		}
+
+		primarySegs := config.Get("segment-array")
+		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+
+		if !ok {
+			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
+		}
+
+		filePathSeg := filepath.Join(valueSegPair[0].Mirror.DataDirectory, "pg_hba.conf")
+		hostSegValue := valueSegPair[0].Mirror.Hostname
+		cmdStrSegValue := "whoami"
+		cmdSegvalue := exec.Command("ssh", hostSegValue, cmdStrSegValue)
+		outputSeg, errSeg := cmdSegvalue.Output()
+		if errSeg != nil {
+			t.Fatalf("unexpected error : %v", errSeg)
+		}
+		resultSeg := strings.TrimSpace(string(outputSeg))
+
+		primaryHostName := valueSegPair[0].Primary.Hostname
+		cmdStrSeg := "ip -4 addr show | grep inet | grep -v 127.0.0.1/8 | awk '{print $2}'"
+		cmdSegValueNew := exec.Command("ssh", primaryHostName, cmdStrSeg)
+		outputSegNew, err := cmdSegValueNew.Output()
+		if err != nil {
+			t.Fatalf("unexpected error : %v", err)
+		}
+
+		resultSegValue := string(outputSegNew)
+		firstValueNew := strings.Split(resultSegValue, "\n")[0]
+		pgHbaLineNew := fmt.Sprintf("host\treplication\t%s\t%s\ttrust", resultSeg, firstValueNew)
 		cmdStrSegNew := fmt.Sprintf("/bin/bash -c 'cat %s | grep \"%s\"'", filePathSeg, pgHbaLineNew)
 		cmdSegNew := exec.Command("ssh", hostSegValue, cmdStrSegNew)
 		_, err = cmdSegNew.CombinedOutput()
