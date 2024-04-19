@@ -18,6 +18,7 @@ import (
 var (
 	gparray     greenplum.GpArray
 	coordinator *greenplum.Segment
+	standby     *greenplum.Segment
 	primary1    *greenplum.Segment
 	primary2    *greenplum.Segment
 	mirror1     *greenplum.Segment
@@ -26,13 +27,15 @@ var (
 
 func initializeGpArray(t *testing.T) {
 	coordinator = createSegment(t, 1, -1, constants.RolePrimary, constants.RolePrimary, 7000, "cdw", "cdw", "/data/primary/gpseg-1")
-	primary1 = createSegment(t, 2, 0, constants.RolePrimary, constants.RolePrimary, 7001, "sdw1", "sdw1", "/data/primary/gpseg0")
+	standby = createSegment(t, 2, -1, constants.RoleMirror, constants.RoleMirror, 7001, "scdw", "scdw", "/data/mirror/gpseg-1")
+	primary1 = createSegment(t, 3, 0, constants.RolePrimary, constants.RolePrimary, 7002, "sdw1", "sdw1", "/data/primary/gpseg0")
 	primary2 = createSegment(t, 4, 1, constants.RolePrimary, constants.RolePrimary, 7003, "sdw2", "sdw2", "/data/primary/gpseg1")
-	mirror1 = createSegment(t, 3, 0, constants.RoleMirror, constants.RoleMirror, 7002, "sdw2", "sdw2", "/data/mirror/gpseg0")
-	mirror2 = createSegment(t, 5, 1, constants.RoleMirror, constants.RoleMirror, 7004, "sdw1", "sdw1", "/data/mirror/gpseg1")
+	mirror1 = createSegment(t, 4, 0, constants.RoleMirror, constants.RoleMirror, 7004, "sdw2", "sdw2", "/data/mirror/gpseg0")
+	mirror2 = createSegment(t, 6, 1, constants.RoleMirror, constants.RoleMirror, 7005, "sdw1", "sdw1", "/data/mirror/gpseg1")
 
 	gparray = greenplum.GpArray{
 		Coordinator: coordinator,
+		Standby:     standby,
 		SegmentPairs: []greenplum.SegmentPair{
 			{
 				Primary: primary1,
@@ -53,7 +56,7 @@ func TestNewGpArrayFromCatalog(t *testing.T) {
 		conn, mock := testutils.CreateAndConnectMockDB(t, 1)
 
 		rows := sqlmock.NewRows([]string{"dbid", "content", "role", "preferredrole", "port", "hostname", "address", "datadir"})
-		addSegmentRows(t, rows, coordinator, primary1, mirror1, primary2, mirror2)
+		addSegmentRows(t, rows, coordinator, standby, primary1, mirror1, primary2, mirror2)
 		mock.ExpectQuery("SELECT").WillReturnRows(rows)
 
 		result, err := greenplum.NewGpArrayFromCatalog(conn)
@@ -63,6 +66,7 @@ func TestNewGpArrayFromCatalog(t *testing.T) {
 
 		expected := &greenplum.GpArray{
 			Coordinator: coordinator,
+			Standby:     standby,
 			SegmentPairs: []greenplum.SegmentPair{
 				{
 					Primary: primary1,
@@ -91,7 +95,7 @@ func TestNewGpArrayFromCatalog(t *testing.T) {
 		defer initializeGpArray(t)
 
 		rows := sqlmock.NewRows([]string{"dbid", "content", "role", "preferredrole", "port", "hostname", "address", "datadir"})
-		addSegmentRows(t, rows, coordinator, primary1, mirror1, primary2, mirror2)
+		addSegmentRows(t, rows, coordinator, standby, primary1, mirror1, primary2, mirror2)
 		mock.ExpectQuery("SELECT").WillReturnRows(rows)
 
 		result, err := greenplum.NewGpArrayFromCatalog(conn)
@@ -101,6 +105,7 @@ func TestNewGpArrayFromCatalog(t *testing.T) {
 
 		expected := &greenplum.GpArray{
 			Coordinator: coordinator,
+			Standby:     standby,
 			SegmentPairs: []greenplum.SegmentPair{
 				{
 					Primary: mirror1,
