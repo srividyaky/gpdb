@@ -330,7 +330,7 @@ func ValidateExpansionConfigAndSetDefault(config *InitConfig, cliHandle *viper.V
 
 	if !cliHandle.IsSet("primary-base-port") {
 		defaultPrimaryBasePort := config.Coordinator.Port + 2
-		gplog.Warn("invalid primary-base-port value provided. Setting default to: %d", defaultPrimaryBasePort)
+		gplog.Warn("primary-base-port value not specified. Setting default to: %d", defaultPrimaryBasePort)
 		config.PrimaryBasePort = defaultPrimaryBasePort
 	}
 
@@ -356,7 +356,7 @@ func ValidateExpansionConfigAndSetDefault(config *InitConfig, cliHandle *viper.V
 		// validate mirror base port
 		if !cliHandle.IsSet("mirror-base-port") {
 			defaultMirrorBasePort := config.PrimaryBasePort + 1000
-			gplog.Warn("No mirror-base-port value provided. Setting default to: %d", defaultMirrorBasePort)
+			gplog.Warn("mirror-base-port value not specified. Setting default to: %d", defaultMirrorBasePort)
 			config.MirrorBasePort = defaultMirrorBasePort
 		}
 
@@ -366,6 +366,10 @@ func ValidateExpansionConfigAndSetDefault(config *InitConfig, cliHandle *viper.V
 
 		if config.MirrorBasePort == config.Coordinator.Port {
 			return fmt.Errorf("coordinator port and mirror-base-port value cannot be same. Please provide different values")
+		}
+
+		if config.MirrorBasePort == config.PrimaryBasePort {
+			return fmt.Errorf("primary-base-port and mirror-base-port value cannot be same. Please provide different values")
 		}
 
 		//TODO Check if the primary and mirror range overlaps
