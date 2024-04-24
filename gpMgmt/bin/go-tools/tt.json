@@ -1,0 +1,26 @@
+{
+ "common-config": {},
+ "coordinator": {
+  "hostname": "skyHMD6R.vmware.com",
+  "address": "skyHMD6R.vmware.com",
+  "port": 7000,
+  "data-directory": "/tmp/demo/-1"
+ },
+ "coordinator-config": {},
+ "hostlist": [
+  "skyHMD6R.vmware.com"
+ ],
+ "primary-base-port": 7002,
+ "primary-data-directories": [
+  "/tmp/primary"
+
+ ],
+ "mirror-base-port": 8002,
+ "mirror-data-directories": [
+   "/tmp/mirror"
+
+
+ ],
+ "mirroring-type": "spread",
+ "segment-config": {}
+}

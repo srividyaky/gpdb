@@ -1,0 +1,26 @@
+{
+  "common-config": {},
+  "coordinator": {
+    "hostname": "cdw",
+    "address": "cdw",
+    "port": 7000,
+    "data-directory": "/data/qddir/gpseg-1"
+  },
+  "coordinator-config": {},
+  "hostlist": [
+    "sdw1",
+    "sdw2",
+    "sdw3"
+  ],
+  "mirror-base-port": 8002,
+  "mirror-data-directories": [
+    "/tmp/mirror",
+    "/tmp/mirror"
+  ],
+  "mirroring-type": "group",
+  "primary-data-directories": [
+    "/tmp/primary",
+    "/tmp/primary"
+  ],
+  "segment-config": {}
+}

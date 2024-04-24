@@ -1,0 +1,55 @@
+{
+  "common-config": {},
+  "coordinator": {
+    "hostname": "localhost",
+    "address": "localhost",
+    "port": 7000,
+    "data-directory": "/tmp/demo/-1"
+  },
+  "coordinator-config": {},
+  "segment-array": [
+    {
+      "Primary": {
+        "hostname": "localhost",
+        "address": "localhost",
+        "port": 7002,
+        "data-directory": "/tmp/primary/gpseg0"
+      },
+      "Mirror": {
+        "hostname": "localhost",
+        "address": "localhost",
+        "port": 7005,
+        "data-directory": "/tmp/mirror/gpmirror1"
+      }
+    },
+    {
+      "Primary": {
+        "hostname": "localhost",
+        "address": "localhost",
+        "port": 7003,
+        "data-directory": "/tmp/primary/gpseg1"
+      },
+      "Mirror": {
+        "hostname": "localhost",
+        "address": "localhost",
+        "port": 7006,
+        "data-directory": "/tmp/mirror/gpmirror2"
+      }
+    },
+    {
+      "Primary": {
+        "hostname": "localhost",
+        "address": "localhost",
+        "port": 7004,
+        "data-directory": "/tmp/primary/gpseg2"
+      },
+      "Mirror": {
+        "hostname": "localhost",
+        "address": "localhost",
+        "port": 7007,
+        "data-directory": "/tmp/mirror/gpmirror3"
+      }
+    }
+  ],
+  "segment-config": {}
+}

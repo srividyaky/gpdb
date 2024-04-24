@@ -92,7 +92,7 @@ func TestValidateMultiHomeConfig(t *testing.T) {
 		}
 	})
 
-	t.Run("returns error when spread mirroring and number of unique hosts is lesser", func(t *testing.T) {
+	t.Run("returns error when spread mirroring and number of unique hosts is equal", func(t *testing.T) {
 		testStr := "to enable spread mirroring, number of hosts should be more than number of primary segments per host."
 		config := cli.InitConfig{PrimaryDataDirectories: []string{"/tmp", "/tmp", "/tmp", "/tmp"},
 			MirrorDataDirectories: []string{"/tmp", "/tmp", "/tmp", "/tmp"},
@@ -102,6 +102,24 @@ func TestValidateMultiHomeConfig(t *testing.T) {
 			"sdw2": {"sdw2-1", "sdw2-2", "sdw2-3", "sdw2-4"},
 			"sdw3": {"sdw3-1", "sdw3-2", "sdw3-3", "sdw3-4"},
 			"sdw4": {"sdw4-1", "sdw4-2", "sdw4-3", "sdw4-4"},
+		}
+		cli.ContainsMirror = true
+
+		_, err := cli.ValidateMultiHomeConfig(config, addressMap)
+		if err == nil || !strings.Contains(err.Error(), testStr) {
+			t.Fatalf("Got:%v, Want: %s", err, testStr)
+		}
+	})
+
+	t.Run("returns error when spread mirroring and number of unique hosts is lesser", func(t *testing.T) {
+		testStr := "to enable spread mirroring, number of hosts should be more than number of primary segments per host."
+		config := cli.InitConfig{PrimaryDataDirectories: []string{"/tmp", "/tmp", "/tmp", "/tmp"},
+			MirrorDataDirectories: []string{"/tmp", "/tmp", "/tmp", "/tmp"},
+			MirroringType:         constants.SpreadMirroring}
+		addressMap := map[string][]string{
+			"sdw1": {"sdw1-1", "sdw1-2", "sdw1-3", "sdw1-4"},
+			"sdw2": {"sdw2-1", "sdw2-2", "sdw2-3", "sdw2-4"},
+			"sdw3": {"sdw3-1", "sdw3-2", "sdw3-3", "sdw3-4"},
 		}
 		cli.ContainsMirror = true
 
@@ -348,6 +366,21 @@ func TestValidateExpansionConfigAndSetDefault(t *testing.T) {
 		cliHandle.Set("mirroring-type", constants.SpreadMirroring)
 		cliHandle.Set("primary-data-directories", []string{"/test"})
 		cliHandle.Set("hostlist", []string{"swd1"})
+
+		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
+		if err == nil || !strings.Contains(err.Error(), testStr) {
+			t.Fatalf("Got:%v, Expected:%s", err, testStr)
+		}
+	})
+
+	t.Run("returns error when number of hosts are equal in spread mirroring", func(t *testing.T) {
+		testStr := "To enable spread mirroring, number of hosts should be more than number of primary segments per host."
+		cliHandle := viper.New()
+		basePort := 9000
+		config := &cli.InitConfig{PrimaryDataDirectories: []string{"/test1", "/test2", "/test3"}, HostList: []string{"swd1", "sdw2", "sdw3"}, Coordinator: cli.Segment{Port: basePort}, MirrorDataDirectories: []string{"/mirror1", "/mirror2", "/mirror3"}, MirroringType: constants.SpreadMirroring}
+		cliHandle.Set("mirroring-type", constants.SpreadMirroring)
+		cliHandle.Set("primary-data-directories", []string{"/test1", "/test2", "/test3"})
+		cliHandle.Set("hostlist", []string{"swd1", "sdw2", "sdw3"})
 
 		err := cli.ValidateExpansionConfigAndSetDefault(config, cliHandle)
 		if err == nil || !strings.Contains(err.Error(), testStr) {

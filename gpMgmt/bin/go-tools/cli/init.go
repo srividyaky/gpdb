@@ -384,7 +384,7 @@ func ValidateExpansionConfigAndSetDefault(config *InitConfig, cliHandle *viper.V
 
 		// Check if mirroring type is spread mirroring, the number of hosts should be greater than the number of primaries
 		// per host so that we can spread segments
-		if strings.ToLower(config.MirroringType) == constants.SpreadMirroring && len(config.MirrorDataDirectories) > len(config.HostList) {
+		if strings.ToLower(config.MirroringType) == constants.SpreadMirroring && !(len(config.MirrorDataDirectories) < len(config.HostList)) {
 			strErr := fmt.Sprintf("To enable spread mirroring, number of hosts should be more than number of primary segments per host. "+
 				"Current number of hosts is: %d and number of primaries per host is:%d", len(config.HostList), len(config.MirrorDataDirectories))
 			return fmt.Errorf(strErr)

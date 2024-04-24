@@ -1,0 +1,21 @@
+dbid | content | role | preferred_role | mode | status | port | hostname | address |          datadir
+------+---------+------+----------------+------+--------+------+----------+---------+---------------------------
+    1 |      -1 | p    | p              | n    | u      | 7000 | cdw      | cdw     | /data/qddir/gpseg-1
+    9 |       7 | p    | p              | s    | u      | 7003 | sdw3     | sdw3    | /tmp/demo/primary2/gpseg7
+   18 |       7 | m    | m              | s    | u      | 8003 | sdw2     | sdw2    | /tmp/demo/mirror2/gpseg7
+    2 |       0 | p    | p              | s    | u      | 7002 | sdw1     | sdw1    | /tmp/demo/primary1/gpseg0
+   11 |       0 | m    | m              | s    | u      | 8002 | sdw2     | sdw2    | /tmp/demo/mirror1/gpseg0
+    3 |       1 | p    | p              | s    | u      | 7003 | sdw1     | sdw1    | /tmp/demo/primary2/gpseg1
+   12 |       1 | m    | m              | s    | u      | 8003 | sdw3     | sdw3    | /tmp/demo/mirror2/gpseg1
+    4 |       2 | p    | p              | s    | u      | 7004 | sdw1     | sdw1    | /tmp/demo/primary3/gpseg2
+   13 |       2 | m    | m              | s    | u      | 8004 | sdw1     | sdw1    | /tmp/demo/mirror3/gpseg2
+    5 |       3 | p    | p              | s    | u      | 7002 | sdw2     | sdw2    | /tmp/demo/primary1/gpseg3
+   14 |       3 | m    | m              | s    | u      | 8002 | sdw3     | sdw3    | /tmp/demo/mirror1/gpseg3
+    6 |       4 | p    | p              | s    | u      | 7003 | sdw2     | sdw2    | /tmp/demo/primary2/gpseg4
+   15 |       4 | m    | m              | s    | u      | 8003 | sdw1     | sdw1    | /tmp/demo/mirror2/gpseg4
+    7 |       5 | p    | p              | s    | u      | 7004 | sdw2     | sdw2    | /tmp/demo/primary3/gpseg5
+   16 |       5 | m    | m              | s    | u      | 8004 | sdw2     | sdw2    | /tmp/demo/mirror3/gpseg5
+    8 |       6 | p    | p              | s    | u      | 7002 | sdw3     | sdw3    | /tmp/demo/primary1/gpseg6
+   17 |       6 | m    | m              | s    | u      | 8002 | sdw1     | sdw1    | /tmp/demo/mirror1/gpseg6
+   10 |       8 | p    | p              | s    | u      | 7004 | sdw3     | sdw3    | /tmp/demo/primary3/gpseg8
+   19 |       8 | m    | m              | s    | u      | 8004 | sdw3     | sdw3    | /tmp/demo/mirror3/gpseg8
