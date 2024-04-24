@@ -830,6 +830,7 @@ func GetDefaultConfig(t *testing.T, expansion ...bool) *viper.Viper {
 		t.Fatalf("unexpected error: %#v", err)
 	}
 	fmt.Println("PRINTING HOSTLIST")
+	hostList := testutils.GetHostListFromFile(*hostfile)
 	fmt.Println(hostList)
 	coordinatorHost := hostList[0]
 	fmt.Println("coordinator host")
