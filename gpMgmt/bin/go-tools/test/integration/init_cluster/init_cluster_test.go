@@ -156,4 +156,32 @@ func TestInitCluster(t *testing.T) {
 	t.Run("check if the cluster is created successfully by passing config file with toml extension", func(t *testing.T) {
 		testConfigFileCreation(t, "toml")
 	})
+
+	testExpansionConfigFileCreation := func(t *testing.T, fileExtension string) {
+		configFile := testutils.GetTempFile(t, fmt.Sprintf("config.%s", fileExtension))
+		config := GetDefaultConfig(t, true)
+
+		err := config.WriteConfigAs(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+
+		result, err := testutils.RunInitCluster(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
+		}
+
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	}
+
+	t.Run("verify expansion by passing config file with yaml extension", func(t *testing.T) {
+		testExpansionConfigFileCreation(t, "yaml")
+	})
+
+	t.Run("verify expansion by passing config file with toml extension", func(t *testing.T) {
+		testExpansionConfigFileCreation(t, "toml")
+	})
 }
