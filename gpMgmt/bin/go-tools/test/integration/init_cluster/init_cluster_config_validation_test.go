@@ -642,7 +642,7 @@ func TestInputFileValidation(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
 		config := GetDefaultConfig(t, true)
 
-		configSettings := config.AllSettings()
+		//configSettings := config.AllSettings()
 		config.Set("mirroring-type", "spread")
 
 		// primaryDirs := config.GetStringSlice("primary-data-directories")
