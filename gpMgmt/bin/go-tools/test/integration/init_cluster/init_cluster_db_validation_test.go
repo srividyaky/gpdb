@@ -668,7 +668,7 @@ func TestExpansionValidation(t *testing.T) {
 		}
 
 		//below warning message needs to be corrected once bug is fixed
-		expectedWarning := fmt.Sprintf("[WARNING]:-invalid primary-base-port value provided. Setting default to: %d", coordinatorPort+2)
+		expectedWarning := fmt.Sprintf("[WARNING]:-primary-base-port value not specified. Setting default to: %d", coordinatorPort+2)
 		if !strings.Contains(result.OutputMsg, expectedWarning) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedWarning)
 		}
@@ -769,7 +769,7 @@ func TestExpansionValidation(t *testing.T) {
 		}
 
 		//below warning message needs to be corrected once bug is fixed
-		expectedWarning := fmt.Sprintf("[WARNING]:-No mirror-base-port value provided. Setting default to: %d", coordinatorPort+1002)
+		expectedWarning := fmt.Sprintf("[WARNING]:-mirror-base-port value not specified. Setting default to: %d", coordinatorPort+1002)
 		if !strings.Contains(result.OutputMsg, expectedWarning) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedWarning)
 		}

@@ -608,7 +608,6 @@ func TestInputFileValidation(t *testing.T) {
 	})
 
 	t.Run("verify expansion with duplicate ports for primary and mirror", func(t *testing.T) {
-		hostIndex := 0
 		configFile := testutils.GetTempFile(t, "config.json")
 		config := GetDefaultConfig(t, true)
 
@@ -628,16 +627,12 @@ func TestInputFileValidation(t *testing.T) {
 		fmt.Println("Updated configuration:")
 		fmt.Println(string(jsonConfig))
 
-		if len(hostList) > 1 {
-			hostIndex = 1
-		}
-
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
 			t.Fatalf("got %v, want exit status 1", err)
 		}
 
-		expectedOut := fmt.Sprintf("[ERROR]:-duplicate port entry %d found for host %s", config.Get("mirror-base-port"), config.Get("hostlist").([]string)[hostIndex])
+		expectedOut := "[ERROR]:-primary-base-port and mirror-base-port value cannot be same. Please provide different values"
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Errorf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
@@ -797,6 +792,8 @@ func TestInputFileValidation(t *testing.T) {
 		fmt.Println(string(content))
 
 		result, err := testutils.RunInitCluster(configFile)
+		fmt.Println("OUTPUT MSG")
+		fmt.Println(result.OutputMsg)
 		if err != nil {
 			t.Fatalf("Error while intializing cluster: %#v", err)
 		}
