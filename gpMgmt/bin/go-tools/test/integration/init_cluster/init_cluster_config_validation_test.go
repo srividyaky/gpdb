@@ -3,7 +3,6 @@ package init_cluster
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -426,15 +425,15 @@ func TestInputFileValidation(t *testing.T) {
 		// 	t.Fatalf("unexpected error: %#v", err)
 		// }
 
-		content, err := ioutil.ReadFile(configFile)
-		if err != nil {
-			fmt.Printf("Error reading configuration file: %v\n", err)
-			return
-		}
+		// content, err := ioutil.ReadFile(configFile)
+		// if err != nil {
+		// 	fmt.Printf("Error reading configuration file: %v\n", err)
+		// 	return
+		// }
 
-		// Print the content of the configuration file
-		fmt.Println("Configuration file content:")
-		fmt.Println(string(content))
+		// // Print the content of the configuration file
+		// fmt.Println("Configuration file content:")
+		// fmt.Println(string(content))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -478,17 +477,17 @@ func TestInputFileValidation(t *testing.T) {
 		}
 
 		// uncomment below when u want to see what s coming in json
-		configSettings := config.AllSettings()
+		// configSettings := config.AllSettings()
 
-		// Marshal the settings into JSON format
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		// // Marshal the settings into JSON format
+		// jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
+		// if err != nil {
+		// 	t.Fatalf("unexpected error: %v", err)
+		// }
 
-		// Print the JSON configuration
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
+		// // Print the JSON configuration
+		// fmt.Println("Updated configuration:")
+		// fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -512,17 +511,17 @@ func TestInputFileValidation(t *testing.T) {
 		}
 
 		// uncomment below when u want to see what s coming in json
-		configSettings := config.AllSettings()
+		//configSettings := config.AllSettings()
 
 		// Marshal the settings into JSON format
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		// jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
+		// if err != nil {
+		// 	t.Fatalf("unexpected error: %v", err)
+		// }
 
-		// Print the JSON configuration
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
+		// // Print the JSON configuration
+		// fmt.Println("Updated configuration:")
+		// fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -550,17 +549,17 @@ func TestInputFileValidation(t *testing.T) {
 			t.Fatalf("failed to write config to file: %v", err)
 		}
 		// uncomment below when u want to see what s coming in json
-		configSettings := config.AllSettings()
+		// configSettings := config.AllSettings()
 
-		// Marshal the settings into JSON format
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		// // Marshal the settings into JSON format
+		// jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
+		// if err != nil {
+		// 	t.Fatalf("unexpected error: %v", err)
+		// }
 
-		// Print the JSON configuration
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
+		// // Print the JSON configuration
+		// fmt.Println("Updated configuration:")
+		// fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -584,17 +583,17 @@ func TestInputFileValidation(t *testing.T) {
 		}
 
 		// uncomment below when u want to see what s coming in json
-		configSettings := config.AllSettings()
+		// configSettings := config.AllSettings()
 
-		// Marshal the settings into JSON format
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		// // Marshal the settings into JSON format
+		// jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
+		// if err != nil {
+		// 	t.Fatalf("unexpected error: %v", err)
+		// }
 
-		// Print the JSON configuration
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
+		// // Print the JSON configuration
+		// fmt.Println("Updated configuration:")
+		// fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -619,13 +618,13 @@ func TestInputFileValidation(t *testing.T) {
 		}
 
 		//uncomment below when u want to see what s coming in json
-		configSettings := config.AllSettings()
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
+		// configSettings := config.AllSettings()
+		// jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
+		// if err != nil {
+		// 	t.Fatalf("unexpected error: %v", err)
+		// }
+		// fmt.Println("Updated configuration:")
+		// fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -660,13 +659,13 @@ func TestInputFileValidation(t *testing.T) {
 		}
 
 		//uncommen tbelow line if u want to see the json formed
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		// jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
+		// if err != nil {
+		// 	t.Fatalf("unexpected error: %v", err)
+		// }
 
-		fmt.Println("Updated new configuration:")
-		fmt.Println(string(jsonConfig))
+		// fmt.Println("Updated new configuration:")
+		// fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -692,15 +691,15 @@ func TestInputFileValidation(t *testing.T) {
 		}
 
 		//comment below lines untill runinit cluster now i have put just to see json
-		configSettings := config.AllSettings()
+		// configSettings := config.AllSettings()
 
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		// jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
+		// if err != nil {
+		// 	t.Fatalf("unexpected error: %v", err)
+		// }
 
-		fmt.Println("Updated new configuration:")
-		fmt.Println(string(jsonConfig))
+		// fmt.Println("Updated new configuration:")
+		// fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -725,17 +724,17 @@ func TestInputFileValidation(t *testing.T) {
 
 		// uncomment below when u want to see what s coming in json
 
-		configSettings := config.AllSettings()
+		// configSettings := config.AllSettings()
 
-		// Marshal the settings into JSON format
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		// // Marshal the settings into JSON format
+		// jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
+		// if err != nil {
+		// 	t.Fatalf("unexpected error: %v", err)
+		// }
 
-		// Print the JSON configuration
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
+		// // Print the JSON configuration
+		// fmt.Println("Updated configuration:")
+		// fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -781,15 +780,15 @@ func TestInputFileValidation(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
-		content, err := ioutil.ReadFile(configFile)
-		if err != nil {
-			fmt.Printf("Error reading configuration file: %v\n", err)
-			return
-		}
+		// content, err := ioutil.ReadFile(configFile)
+		// if err != nil {
+		// 	fmt.Printf("Error reading configuration file: %v\n", err)
+		// 	return
+		// }
 
-		// Print the content of the configuration file
-		fmt.Println("Configuration file content:")
-		fmt.Println(string(content))
+		// // Print the content of the configuration file
+		// fmt.Println("Configuration file content:")
+		// fmt.Println(string(content))
 
 		result, err := testutils.RunInitCluster(configFile)
 		fmt.Println("OUTPUT MSG")
