@@ -52,6 +52,8 @@ func TestMain(m *testing.M) {
 	}
 
 	hostList = testutils.GetHostListFromFile(*hostfile)
+	fmt.Println("suite hostlist")
+	fmt.Println(hostList)
 	if len(hostList) == 0 {
 		fmt.Printf("no hosts provided in the hostfile %q", *hostfile)
 		os.Exit(1)
