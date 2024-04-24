@@ -850,7 +850,7 @@ func GetDefaultConfig(t *testing.T, expansion ...bool) *viper.Viper {
 		mirrorDataDirectories := make([]string, 0)
 
 		//for range hostList {
-		for i := 1; i <= 3; i++ {
+		for i := 1; i <= 2; i++ {
 			primaryDataDirectories = append(primaryDataDirectories, "/tmp/primary")
 			mirrorDataDirectories = append(mirrorDataDirectories, "/tmp/mirror")
 		}
