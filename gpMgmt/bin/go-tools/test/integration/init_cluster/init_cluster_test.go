@@ -29,7 +29,7 @@ func TestInitCluster(t *testing.T) {
 			t.Fatalf("Error while getting status of cluster: %#v", err)
 		}
 		var expectedOut string
-		expectedOut = "[INFO]:-   Coordinator instance                              = Active"
+		expectedOut = "[INFO]:-   Coordinator instance                                      = Active"
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
