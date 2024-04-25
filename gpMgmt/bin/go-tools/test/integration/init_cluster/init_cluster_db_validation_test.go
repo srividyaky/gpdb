@@ -46,34 +46,34 @@ func TestLocaleValidation(t *testing.T) {
 		}
 	})
 
-	// t.Run("individual locale type takes precedence over LC_ALL", func(t *testing.T) {
-	// 	expected := testutils.GetRandomLocale(t)
-	// 	expectedLcCtype := testutils.GetRandomLocale(t)
+	t.Run("individual locale type takes precedence over LC_ALL", func(t *testing.T) {
+		expected := testutils.GetRandomLocale(t)
+		expectedLcCtype := testutils.GetRandomLocale(t)
 
-	// 	configFile := testutils.GetTempFile(t, "config.json")
-	// 	SetConfigKey(t, configFile, "locale", cli.Locale{
-	// 		LcAll:   expected,
-	// 		LcCtype: expectedLcCtype,
-	// 	}, true)
+		configFile := testutils.GetTempFile(t, "config.json")
+		SetConfigKey(t, configFile, "locale", cli.Locale{
+			LcAll:   expected,
+			LcCtype: expectedLcCtype,
+		}, true)
 
-	// 	result, err := testutils.RunInitCluster(configFile)
-	// 	if err != nil {
-	// 		t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
-	// 	}
+		result, err := testutils.RunInitCluster(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
+		}
 
-	// 	for _, localType := range localTypes {
-	// 		if localType == "LC_CTYPE" {
-	// 			testutils.AssertPgConfig(t, localType, expectedLcCtype)
-	// 		} else {
-	// 			testutils.AssertPgConfig(t, localType, expected)
-	// 		}
-	// 	}
+		for _, localType := range localTypes {
+			if localType == "LC_CTYPE" {
+				testutils.AssertPgConfig(t, localType, expectedLcCtype)
+			} else {
+				testutils.AssertPgConfig(t, localType, expected)
+			}
+		}
 
-	// 	_, err = testutils.DeleteCluster()
-	// 	if err != nil {
-	// 		t.Fatalf("unexpected error: %v", err)
-	// 	}
-	// })
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 
 	t.Run("when no locale value is provided, inherits the locale from the environment", func(t *testing.T) {
 		// TODO: on macos launchd does not inherit the system locale value
