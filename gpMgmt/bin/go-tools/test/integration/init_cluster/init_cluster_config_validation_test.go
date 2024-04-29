@@ -3,7 +3,6 @@ package init_cluster
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -401,9 +400,7 @@ func TestInputFileValidation(t *testing.T) {
 	})
 	t.Run("validate expansion with no coordinator details", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t, true)
-
-		//UnsetConfigKey(t, configFile, "coordinator", true, true)
+		config := GetDefaultExpansionConfig(t, true)
 
 		configMap := config.AllSettings()
 		delete(configMap, "coordinator")
@@ -412,29 +409,10 @@ func TestInputFileValidation(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-
 		err = os.WriteFile(configFile, encodedConfig, 0777)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-
-		// configSettings := config.AllSettings()
-		// delete(configSettings, "coordinator")
-
-		// err := config.WriteConfigAs(configFile)
-		// if err != nil {
-		// 	t.Fatalf("unexpected error: %#v", err)
-		// }
-
-		content, err := ioutil.ReadFile(configFile)
-		if err != nil {
-			fmt.Printf("Error reading configuration file: %v\n", err)
-			return
-		}
-
-		// Print the content of the configuration file
-		fmt.Println("Configuration file content:")
-		fmt.Println(string(content))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -449,9 +427,9 @@ func TestInputFileValidation(t *testing.T) {
 
 	t.Run("verify expansion when primary data directory is not provided", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t, true)
-		config.Set("primary-data-directories", []string{})
+		config := GetDefaultExpansionConfig(t, true)
 
+		config.Set("primary-data-directories", []string{})
 		if err := config.WriteConfigAs(configFile); err != nil {
 			t.Fatalf("failed to write config to file: %v", err)
 		}
@@ -469,26 +447,12 @@ func TestInputFileValidation(t *testing.T) {
 
 	t.Run("verify expansion with invalid primary base port is provided", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t, true)
+		config := GetDefaultExpansionConfig(t, true)
 
 		config.Set("primary-base-port", 0)
-
 		if err := config.WriteConfigAs(configFile); err != nil {
 			t.Fatalf("failed to write config to file: %v", err)
 		}
-
-		// uncomment below when u want to see what s coming in json
-		configSettings := config.AllSettings()
-
-		// Marshal the settings into JSON format
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Print the JSON configuration
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -503,26 +467,12 @@ func TestInputFileValidation(t *testing.T) {
 
 	t.Run("verify expansion when empty hostlist is provided", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t, true)
+		config := GetDefaultExpansionConfig(t, true)
 
 		config.Set("hostlist", []string{})
-
 		if err := config.WriteConfigAs(configFile); err != nil {
 			t.Fatalf("failed to write config to file: %v", err)
 		}
-
-		// uncomment below when u want to see what s coming in json
-		configSettings := config.AllSettings()
-
-		// Marshal the settings into JSON format
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Print the JSON configuration
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -537,30 +487,15 @@ func TestInputFileValidation(t *testing.T) {
 
 	t.Run("verify expansion when empty string is provided for mirror data directory", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t, true)
+		config := GetDefaultExpansionConfig(t)
 
 		mirrorDataDirectories := config.GetStringSlice("mirror-data-directories")
-
-		// Empty the first element (index 0) of the mirror data directories slice
 		if len(mirrorDataDirectories) > 0 {
 			mirrorDataDirectories[0] = ""
 		}
-
 		if err := config.WriteConfigAs(configFile); err != nil {
 			t.Fatalf("failed to write config to file: %v", err)
 		}
-		// uncomment below when u want to see what s coming in json
-		configSettings := config.AllSettings()
-
-		// Marshal the settings into JSON format
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Print the JSON configuration
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -575,26 +510,12 @@ func TestInputFileValidation(t *testing.T) {
 
 	t.Run("verify expansion when invalid mirror base port is provided", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t, true)
+		config := GetDefaultExpansionConfig(t)
 
 		config.Set("mirror-base-port", 0)
-
 		if err := config.WriteConfigAs(configFile); err != nil {
 			t.Fatalf("failed to write config to file: %v", err)
 		}
-
-		// uncomment below when u want to see what s coming in json
-		configSettings := config.AllSettings()
-
-		// Marshal the settings into JSON format
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Print the JSON configuration
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -609,23 +530,13 @@ func TestInputFileValidation(t *testing.T) {
 
 	t.Run("verify expansion with duplicate ports for primary and mirror", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t, true)
+		config := GetDefaultExpansionConfig(t)
 
 		config.Set("primary-base-port", 7002)
 		config.Set("mirror-base-port", 7002)
-
 		if err := config.WriteConfigAs(configFile); err != nil {
 			t.Fatalf("failed to write config to file: %v", err)
 		}
-
-		//uncomment below when u want to see what s coming in json
-		configSettings := config.AllSettings()
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -638,35 +549,16 @@ func TestInputFileValidation(t *testing.T) {
 		}
 	})
 
-	//this case needs to be corrected
-	t.Run("verify spread mirroing by providing hosts count less than primary segment count", func(t *testing.T) {
+	t.Run("verify spread mirroing by providing hosts count less than or equal to primary segment count", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t, true)
+		config := GetDefaultExpansionConfig(t)
 
-		configSettings := config.AllSettings()
 		config.Set("mirroring-type", "spread")
-
-		// primaryDirs := config.GetStringSlice("primary-data-directories")
-		// primaryDirs = append(primaryDirs, "/tmp/additionalprimary")
-		// config.Set("primary-data-directories", primaryDirs)
 		config.Set("primary-data-directories", append(config.GetStringSlice("primary-data-directories"), "/tmp/additionalprimary"))
-
-		//mirrorDirs := config.GetStringSlice("mirror-data-directories")
-		//mirrorDirs = append(primaryDirs, "/tmp/additionalmirror")
 		config.Set("mirror-data-directories", append(config.GetStringSlice("mirror-data-directories"), "/tmp/additionalmirror"))
-
 		if err := config.WriteConfigAs(configFile); err != nil {
 			t.Fatalf("failed to write config to file: %v", err)
 		}
-
-		//uncommen tbelow line if u want to see the json formed
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		fmt.Println("Updated new configuration:")
-		fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -681,26 +573,14 @@ func TestInputFileValidation(t *testing.T) {
 
 	t.Run("verify expansion with mismatched Number of primary and mirror directories", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t, true)
+		config := GetDefaultExpansionConfig(t)
 
 		primaryDirs := config.GetStringSlice("primary-data-directories")
 		primaryDirs = append(primaryDirs, "/tmp/demo/additionalprimary")
 		config.Set("primary-data-directories", primaryDirs)
-
 		if err := config.WriteConfigAs(configFile); err != nil {
 			t.Fatalf("failed to write updated config to file: %v", err)
 		}
-
-		//comment below lines untill runinit cluster now i have put just to see json
-		configSettings := config.AllSettings()
-
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		fmt.Println("Updated new configuration:")
-		fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -715,27 +595,12 @@ func TestInputFileValidation(t *testing.T) {
 
 	t.Run("verify expansion with invalid mirror type", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t, true)
+		config := GetDefaultExpansionConfig(t)
 
 		config.Set("mirroring-type", "test_mirror")
-
 		if err := config.WriteConfigAs(configFile); err != nil {
 			t.Fatalf("failed to write config to file: %v", err)
 		}
-
-		// uncomment below when u want to see what s coming in json
-
-		configSettings := config.AllSettings()
-
-		// Marshal the settings into JSON format
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Print the JSON configuration
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
 
 		result, err := testutils.RunInitCluster(configFile)
 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
@@ -750,50 +615,12 @@ func TestInputFileValidation(t *testing.T) {
 
 	t.Run("verify expansion without mirror support", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t, true)
-		// configMap := config.AllSettings()
-		// delete(configMap, "mirror-data-directories")
-		// delete(configMap, "mirror-base-port")
-		// delete(configMap, "mirroring-type")
-
-		// encodedConfig, err := json.MarshalIndent(configMap, "", " ")
-		// if err != nil {
-		// 	t.Fatalf("unexpected error: %v", err)
-		// }
-
-		// err = os.WriteFile(configFile, encodedConfig, 0777)
-		// if err != nil {
-		// 	t.Fatalf("unexpected error: %v", err)
-		// }
-
-		configMap := config.AllSettings()
-		delete(configMap, "mirror-data-directories")
-		delete(configMap, "mirror-base-port")
-		delete(configMap, "mirroring-type")
-
-		encodedConfig, err := json.MarshalIndent(configMap, "", " ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		config := GetDefaultExpansionConfig(t, true)
+		if err := config.WriteConfigAs(configFile); err != nil {
+			t.Fatalf("failed to write config to file: %v", err)
 		}
-
-		err = os.WriteFile(configFile, encodedConfig, 0777)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		content, err := ioutil.ReadFile(configFile)
-		if err != nil {
-			fmt.Printf("Error reading configuration file: %v\n", err)
-			return
-		}
-
-		// Print the content of the configuration file
-		fmt.Println("Configuration file content:")
-		fmt.Println(string(content))
 
 		result, err := testutils.RunInitCluster(configFile)
-		fmt.Println("OUTPUT MSG")
-		fmt.Println(result.OutputMsg)
 		if err != nil {
 			t.Fatalf("Error while intializing cluster: %#v", err)
 		}
@@ -816,8 +643,7 @@ func TestInputFileValidation(t *testing.T) {
 	})
 }
 
-func GetDefaultConfig(t *testing.T, expansion ...bool) *viper.Viper {
-
+func GetDefaultConfig(t *testing.T) *viper.Viper {
 	t.Helper()
 
 	instance := viper.New()
@@ -830,12 +656,7 @@ func GetDefaultConfig(t *testing.T, expansion ...bool) *viper.Viper {
 	if err != nil {
 		t.Fatalf("unexpected error: %#v", err)
 	}
-	fmt.Println("PRINTING HOSTLIST")
-	hostList := testutils.GetHostListFromFile(*hostfile)
-	fmt.Println(hostList)
-	coordinatorHost := hostList[0]
-	fmt.Println("coordinator host")
-	fmt.Println(coordinatorHost)
+
 	instance.Set("coordinator", cli.Segment{
 		Port:          testutils.DEFAULT_COORDINATOR_PORT,
 		Hostname:      hostList[0],
@@ -843,78 +664,25 @@ func GetDefaultConfig(t *testing.T, expansion ...bool) *viper.Viper {
 		DataDirectory: coordinatorDatadir,
 	})
 
-	if len(expansion) == 1 && expansion[0] {
-		// if len(hostList) > 1 {
-		// 	hostList = hostList[1:]
-		// }
-
-		primaryDataDirectories := make([]string, 0)
-		mirrorDataDirectories := make([]string, 0)
-
-		//for range hostList {
-		for i := 1; i <= 2; i++ {
-			primaryDataDirectories = append(primaryDataDirectories, "/tmp/primary")
-			mirrorDataDirectories = append(mirrorDataDirectories, "/tmp/mirror")
-		}
-		//}
-
-		// if len(hostList) > 1 {
-		// 	// Handle multiple hosts scenario
-		// 	for i := 0; i < len(hostList)-1; i++ {
-		// 		primaryDataDirectories = append(primaryDataDirectories, "/tmp/primary")
-		// 		mirrorDataDirectories = append(mirrorDataDirectories, "/tmp/mirror")
-		// 	}
-		// } else {
-		// 	// Handle single host scenario
-		// 	primaryDataDirectories = append(primaryDataDirectories, "/tmp/primary")
-		// 	mirrorDataDirectories = append(mirrorDataDirectories, "/tmp/mirror")
-		// }
-
-		instance.Set("primary-base-port", testutils.DEFAULT_COORDINATOR_PORT+2)
-		instance.Set("primary-data-directories", primaryDataDirectories)
-		instance.Set("mirror-base-port", testutils.DEFAULT_COORDINATOR_PORT+1002)
-		instance.Set("mirroring-type", "group")
-		instance.Set("mirror-data-directories", mirrorDataDirectories)
-
-		if len(hostList) == 1 {
-			instance.Set("hostlist", hostList)
-		} else {
-			instance.Set("hostlist", hostList[1:])
-		}
-	} else {
-		var segments []cli.SegmentPair
-		if len(hostList) == 1 {
-			hostList = append(hostList, hostList[0], hostList[0], hostList[0])
-		}
-
-		for i := 1; i < len(hostList); i++ {
-			hostPrimary := hostList[i]
-			hostMirror := hostList[(i+1)%len(hostList)]
-			if hostPrimary == coordinatorHost {
-				hostPrimary = hostList[(i+2)%len(hostList)]
-			}
-			if hostMirror == coordinatorHost {
-				hostMirror = hostList[(i+2)%len(hostList)]
-			}
-			primary := &cli.Segment{
-				Port:          testutils.DEFAULT_COORDINATOR_PORT + i + 1,
-				Hostname:      hostPrimary,
-				Address:       hostPrimary,
-				DataDirectory: filepath.Join("/tmp", "primary", fmt.Sprintf("gpseg%d", i-1)),
-			}
-			mirror := &cli.Segment{
-				Port:          testutils.DEFAULT_COORDINATOR_PORT + i + 4,
-				Hostname:      hostMirror,
-				Address:       hostMirror,
-				DataDirectory: filepath.Join("/tmp", "mirror", fmt.Sprintf("gpmirror%d", i)),
-			}
-			segments = append(segments, cli.SegmentPair{
-				Primary: primary,
-				Mirror:  mirror,
-			})
-		}
-		instance.Set("segment-array", segments)
+	var segments []cli.SegmentPair
+	if len(hostList) == 1 {
+		hostList = append(hostList, hostList[0], hostList[0], hostList[0])
 	}
+
+	for i := 1; i < len(hostList); i++ {
+		hostPrimary := hostList[i]
+		primary := &cli.Segment{
+			Port:          testutils.DEFAULT_COORDINATOR_PORT + i + 1,
+			Hostname:      hostPrimary,
+			Address:       hostPrimary,
+			DataDirectory: filepath.Join("/tmp", "demo", fmt.Sprintf("%d", i-1)),
+		}
+		segments = append(segments, cli.SegmentPair{
+			Primary: primary,
+		})
+	}
+	instance.Set("segment-array", segments)
+
 	return instance
 }
 
@@ -967,4 +735,57 @@ func SetConfigKey(t *testing.T, filename string, key string, value interface{}, 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+}
+
+func GetDefaultExpansionConfig(t *testing.T, mirrorless ...bool) *viper.Viper {
+	t.Helper()
+	instance := viper.New()
+	instance.SetConfigFile("sample_init_config.json")
+	instance.SetDefault("common-config", make(map[string]string))
+	instance.SetDefault("coordinator-config", make(map[string]string))
+	instance.SetDefault("segment-config", make(map[string]string))
+
+	err := instance.ReadInConfig()
+	if err != nil {
+		t.Fatalf("unexpected error: %#v", err)
+	}
+
+	hostList := testutils.GetHostListFromFile(*hostfile)
+
+	instance.Set("coordinator", cli.Segment{
+		Port:          testutils.DEFAULT_COORDINATOR_PORT,
+		Hostname:      hostList[0],
+		Address:       hostList[0],
+		DataDirectory: coordinatorDatadir,
+	})
+
+	if len(mirrorless) == 1 && mirrorless[0] {
+		primaryDataDirectories := make([]string, 0)
+		for i := 1; i <= 2; i++ {
+			primaryDataDirectories = append(primaryDataDirectories, fmt.Sprintf("/tmp/primary%d", i))
+		}
+		instance.Set("primary-base-port", testutils.DEFAULT_COORDINATOR_PORT+2)
+		instance.Set("primary-data-directories", primaryDataDirectories)
+
+	} else { //by default creates both primary and mirror
+		primaryDataDirectories := make([]string, 0)
+		mirrorDataDirectories := make([]string, 0)
+
+		for i := 1; i <= 2; i++ {
+			primaryDataDirectories = append(primaryDataDirectories, fmt.Sprintf("/tmp/primary%d", i))
+			mirrorDataDirectories = append(mirrorDataDirectories, fmt.Sprintf("/tmp/mirror%d", i))
+		}
+
+		instance.Set("primary-base-port", testutils.DEFAULT_COORDINATOR_PORT+2)
+		instance.Set("primary-data-directories", primaryDataDirectories)
+		instance.Set("mirror-base-port", testutils.DEFAULT_COORDINATOR_PORT+1002)
+		instance.Set("mirroring-type", "group")
+		instance.Set("mirror-data-directories", mirrorDataDirectories)
+	}
+	if len(hostList) == 1 {
+		instance.Set("hostlist", hostList)
+	} else {
+		instance.Set("hostlist", hostList[1:])
+	}
+	return instance
 }

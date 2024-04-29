@@ -160,7 +160,7 @@ func TestInitCluster(t *testing.T) {
 
 	testExpansionConfigFileCreation := func(t *testing.T, fileExtension string) {
 		configFile := testutils.GetTempFile(t, fmt.Sprintf("config.%s", fileExtension))
-		config := GetDefaultConfig(t, true)
+		config := GetDefaultExpansionConfig(t)
 
 		err := config.WriteConfigAs(configFile)
 		if err != nil {
