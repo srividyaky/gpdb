@@ -116,7 +116,7 @@ func RunGpStatus(params ...string) (CmdResult, error) {
 	allParams := append([]string{"gpstate"}, params...)
 
 	genCmd := Command{
-		cmdStr: allParams[0],  
+		cmdStr: allParams[0],
 		args:   allParams[1:],
 	}
 
@@ -136,6 +136,16 @@ func RunGpCheckCat(params ...string) (CmdResult, error) {
 
 func RunGpStop(params ...string) (CmdResult, error) {
 	allParams := append([]string{"gpstop", "-a"}, params...)
+
+	genCmd := Command{
+		cmdStr: allParams[0],
+		args:   allParams[1:],
+	}
+
+	return runCmd(genCmd)
+}
+func RunGpRecoverSeg(params ...string) (CmdResult, error) {
+	allParams := append([]string{"gprecoverseg", "-a"}, params...)
 
 	genCmd := Command{
 		cmdStr: allParams[0],

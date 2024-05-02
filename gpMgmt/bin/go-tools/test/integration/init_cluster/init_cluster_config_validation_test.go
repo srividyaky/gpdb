@@ -183,7 +183,7 @@ func TestInputFileValidation(t *testing.T) {
 	t.Run("when same data directory is given for a host", func(t *testing.T) {
 		var ok bool
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t)
+		config := GetDefaultConfig(t, true)
 
 		primarySegs := config.Get("segment-array")
 		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
@@ -212,7 +212,7 @@ func TestInputFileValidation(t *testing.T) {
 	t.Run("when same port is given for a host address", func(t *testing.T) {
 		var ok bool
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t)
+		config := GetDefaultConfig(t, true)
 
 		primarySegs := config.Get("segment-array")
 		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
@@ -241,7 +241,7 @@ func TestInputFileValidation(t *testing.T) {
 	t.Run("when empty data directory is given for a host", func(t *testing.T) {
 		var ok bool
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t)
+		config := GetDefaultConfig(t, true)
 
 		primarySegs := config.Get("segment-array")
 		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
@@ -268,7 +268,7 @@ func TestInputFileValidation(t *testing.T) {
 		var ok bool
 		var value cli.Segment
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t)
+		config := GetDefaultConfig(t, true)
 
 		coordinator := config.Get("coordinator")
 		if value, ok = coordinator.(cli.Segment); !ok {
@@ -298,7 +298,7 @@ func TestInputFileValidation(t *testing.T) {
 	t.Run("when both hostaddress and hostnames are not provided for primary segment", func(t *testing.T) {
 		var ok bool
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t)
+		config := GetDefaultConfig(t, true)
 
 		primarySegs := config.Get("segment-array")
 		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
@@ -325,7 +325,7 @@ func TestInputFileValidation(t *testing.T) {
 	t.Run("when the hostname alone is empty for primary segment", func(t *testing.T) {
 		var ok bool
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t)
+		config := GetDefaultConfig(t, true)
 
 		primarySegs := config.Get("segment-array")
 		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
@@ -352,7 +352,7 @@ func TestInputFileValidation(t *testing.T) {
 		var ok bool
 		var value cli.Segment
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t)
+		config := GetDefaultConfig(t, true)
 
 		coordinator := config.Get("coordinator")
 		if value, ok = coordinator.(cli.Segment); !ok {
@@ -376,7 +376,7 @@ func TestInputFileValidation(t *testing.T) {
 	t.Run("when port number is not provided for the primary segment", func(t *testing.T) {
 		var ok bool
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t)
+		config := GetDefaultConfig(t, true)
 
 		primarySegs := config.Get("segment-array")
 		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
@@ -683,7 +683,7 @@ func TestInputFileValidation(t *testing.T) {
 	// })
 }
 
-func GetDefaultConfig(t *testing.T) *viper.Viper {
+func GetDefaultConfig(t *testing.T, mirrorless ...bool) *viper.Viper {
 	t.Helper()
 
 	instance := viper.New()
@@ -709,15 +709,10 @@ func GetDefaultConfig(t *testing.T) *viper.Viper {
 	if len(hostList) == 1 {
 		hostList = append(hostList, hostList[0], hostList[0], hostList[0])
 	}
-
 	for i := 1; i < len(hostList); i++ {
 		hostPrimary := hostList[i]
-		hostMirror := hostList[(i+1)%len(hostList)]
 		if hostPrimary == coordinatorHost {
 			hostPrimary = hostList[(i+2)%len(hostList)]
-		}
-		if hostMirror == coordinatorHost {
-			hostMirror = hostList[(i+2)%len(hostList)]
 		}
 		primary := &cli.Segment{
 			Port:          testutils.DEFAULT_COORDINATOR_PORT + i + 1,
@@ -725,16 +720,28 @@ func GetDefaultConfig(t *testing.T) *viper.Viper {
 			Address:       hostPrimary,
 			DataDirectory: filepath.Join("/tmp", "primary", fmt.Sprintf("gpseg%d", i-1)),
 		}
-		mirror := &cli.Segment{
-			Port:          testutils.DEFAULT_COORDINATOR_PORT + i + 4,
-			Hostname:      hostMirror,
-			Address:       hostMirror,
-			DataDirectory: filepath.Join("/tmp", "mirror", fmt.Sprintf("gpmirror%d", i)),
+		if len(mirrorless) > 0 && mirrorless[0] {
+			// Configure only primary segment when mirrorless is true
+			segments = append(segments, cli.SegmentPair{
+				Primary: primary,
+			})
+		} else {
+			//configure both primary and mirror
+			hostMirror := hostList[(i+1)%len(hostList)]
+			if hostMirror == coordinatorHost {
+				hostMirror = hostList[(i+2)%len(hostList)]
+			}
+			mirror := &cli.Segment{
+				Port:          testutils.DEFAULT_COORDINATOR_PORT + i + 4,
+				Hostname:      hostMirror,
+				Address:       hostMirror,
+				DataDirectory: filepath.Join("/tmp", "mirror", fmt.Sprintf("gpmirror%d", i)),
+			}
+			segments = append(segments, cli.SegmentPair{
+				Primary: primary,
+				Mirror:  mirror,
+			})
 		}
-		segments = append(segments, cli.SegmentPair{
-			Primary: primary,
-			Mirror:  mirror,
-		})
 	}
 	instance.Set("segment-array", segments)
 

@@ -2,8 +2,8 @@ package init_cluster
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"runtime"
@@ -175,11 +175,11 @@ func TestPgConfig(t *testing.T) {
 		}
 	})
 
-	t.Run("check if the gp_segment_configuration table has the correct value", func(t *testing.T) {
+	t.Run("check if the gp_segment_configuration table has the correct value for primary", func(t *testing.T) {
 		var value cli.Segment
 		var ok bool
 		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t)
+		config := GetDefaultConfig(t, true)
 
 		err := config.WriteConfigAs(configFile)
 		if err != nil {
@@ -297,16 +297,16 @@ func TestPgConfig(t *testing.T) {
 			t.Fatalf("unexpected data type for coordinator %T", value)
 		}
 
-		primarySegs := config.Get("segment-array")
-		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+		mirrorSegs := config.Get("segment-array")
+		valueSegPair, ok := mirrorSegs.([]cli.SegmentPair)
 		if !ok {
-			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
+			t.Fatalf("unexpected data type for segment-array %T", mirrorSegs)
 		}
 
-		var primarySegments []cli.Segment
+		var mirrorSegments []cli.Segment
 
 		for _, segPair := range valueSegPair {
-			primarySegments = append(primarySegments, *segPair.Mirror)
+			mirrorSegments = append(mirrorSegments, *segPair.Mirror)
 		}
 
 		result, err := testutils.RunInitCluster(configFile)
@@ -340,8 +340,8 @@ func TestPgConfig(t *testing.T) {
 			}
 		}
 
-		if !reflect.DeepEqual(resultSegs, primarySegments) {
-			t.Fatalf("got %+v, want %+v", resultSegs, primarySegments)
+		if !reflect.DeepEqual(resultSegs, mirrorSegments) {
+			t.Fatalf("got %+v, want %+v", resultSegs, mirrorSegments)
 		}
 
 		_, err = testutils.DeleteCluster()
@@ -524,27 +524,16 @@ func TestGpToolKitValidation(t *testing.T) {
 		}
 	})
 }
-
-func TestPgHbaConfValidation(t *testing.T) {
-	/* FIXME:concurse is failing to resolve ip to hostname*/
-	/*t.Run("pghba config file validation when hbahostname is true", func(t *testing.T) {
+func TestPgStatReplicationValidation(t *testing.T) {
+	t.Run("check if the pg_stat_replication table has the correct number of primary hosts", func(t *testing.T) {
 		var value cli.Segment
 		var ok bool
-		var valueSeg []cli.Segment
-		var okSeg bool
 		configFile := testutils.GetTempFile(t, "config.json")
 		config := GetDefaultConfig(t)
 
 		err := config.WriteConfigAs(configFile)
 		if err != nil {
 			t.Fatalf("unexpected error: %#v", err)
-		}
-
-		SetConfigKey(t, configFile, "hba-hostnames", true, true)
-
-		result, err := testutils.RunInitCluster(configFile)
-		if err != nil {
-			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
 		}
 
 		coordinator := config.Get("coordinator")
@@ -552,51 +541,35 @@ func TestPgHbaConfValidation(t *testing.T) {
 			t.Fatalf("unexpected data type for coordinator %T", value)
 		}
 
-		filePathCord := filepath.Join(coordinator.(cli.Segment).DataDirectory, "pg_hba.conf")
-		hostCord := coordinator.(cli.Segment).Hostname
-		cmdStr := "whoami"
-		cmd := exec.Command("ssh", hostCord, cmdStr)
-		output, err := cmd.Output()
-		if err != nil {
-			t.Fatalf("unexpected error : %v", err)
-		}
-
-		resultCord := strings.TrimSpace(string(output))
-		pgHbaLine := fmt.Sprintf("host\tall\t%s\t%s\ttrust", resultCord, coordinator.(cli.Segment).Hostname)
-		cmdStrCord := fmt.Sprintf("/bin/bash -c 'cat %s | grep \"%s\"'", filePathCord, pgHbaLine)
-		cmdCord := exec.Command("ssh", hostCord, cmdStrCord)
-		_, err = cmdCord.CombinedOutput()
-		if err != nil {
-			t.Fatalf("unexpected error : %v", err)
-		}
-
 		primarySegs := config.Get("segment-array")
 		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
-
 		if !ok {
 			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
 		}
+		numPrimary := len(valueSegPair)
 
-		pgHbaLineSeg := fmt.Sprintf("host\tall\tall\t%s\ttrust", primarySegs.([]cli.Segment)[0].Hostname)
-		filePathSeg := filepath.Join(primarySegs.([]cli.Segment)[0].DataDirectory, "pg_hba.conf")
-		cmdStr_seg := fmt.Sprintf("/bin/bash -c 'cat %s | grep \"%s\"'", filePathSeg, pgHbaLineSeg)
-		hostSeg := primarySegs.([]cli.Segment)[0].Hostname
-		cmdSeg := exec.Command("ssh", hostSeg, cmdStr_seg)
-		_, err = cmdSeg.CombinedOutput()
+		result, err := testutils.RunInitCluster(configFile)
 		if err != nil {
-			t.Fatalf("unexpected error : %v", err)
+			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
 		}
+
+		expectedOut := "[INFO]:-Cluster initialized successfully"
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
+		}
+
+		rows := testutils.ExecQuery(t, "", "select * from gp_stat_replication where state='streaming'")
+		testutils.AssertRowCount(t, rows, numPrimary)
 
 		_, err = testutils.DeleteCluster()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-	})*/
+	})
+}
 
-	t.Run("pghba config file validation when hbahostname is false", func(t *testing.T) {
-		var value cli.Segment
-		var ok bool
-
+func TestGpRecoverSegValidation(t *testing.T) {
+	t.Run("check if the cluster is created successfully and verify that gprecoverseg works fine", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
 		config := GetDefaultConfig(t)
 
@@ -605,77 +578,40 @@ func TestPgHbaConfValidation(t *testing.T) {
 			t.Fatalf("unexpected error: %#v", err)
 		}
 
-		SetConfigKey(t, configFile, "hba-hostnames", false, true)
+		primarySegs := config.Get("segment-array")
+		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+		if !ok {
+			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
+		}
 
 		result, err := testutils.RunInitCluster(configFile)
 		if err != nil {
 			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
 		}
 
-		coordinator := config.Get("coordinator")
-		if value, ok = coordinator.(cli.Segment); !ok {
-			t.Fatalf("unexpected data type for coordinator %T", value)
+		expectedOut := "[INFO]:-Cluster initialized successfully"
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
 
-		filePathCord := filepath.Join(coordinator.(cli.Segment).DataDirectory, "pg_hba.conf")
-		hostCord := coordinator.(cli.Segment).Hostname
-		cmdStr := "whoami"
-		cmd := exec.Command("ssh", hostCord, cmdStr)
-		output, err := cmd.Output()
-		if err != nil {
-			t.Fatalf("unexpected error : %v", err)
-		}
-
-		resultCord := strings.TrimSpace(string(output))
-		cmdStrCord := "ip -4 addr show | grep inet | grep -v 127.0.0.1/8 | awk '{print $2}'"
-		cmdCord := exec.Command("ssh", hostCord, cmdStrCord)
-		outputCord, err := cmdCord.Output()
-		if err != nil {
-			t.Fatalf("unexpected error : %v", err)
-		}
-
-		resultCordValue := string(outputCord)
-		firstCordValue := strings.Split(resultCordValue, "\n")[0]
-		pgHbaLine := fmt.Sprintf("host\tall\t%s\t%s\ttrust", resultCord, firstCordValue)
-		cmdStrCordValue := fmt.Sprintf("/bin/bash -c 'cat %s | grep \"%s\"'", filePathCord, pgHbaLine)
-		cmdCordValue := exec.Command("ssh", hostCord, cmdStrCordValue)
-		_, err = cmdCordValue.CombinedOutput()
-		if err != nil {
-			t.Fatalf("unexpected error : %v", err)
-		}
-
-		primarySegs := config.Get("segment-array")
-		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
-
-		if !ok {
-			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
-		}
-
-		filePathSeg := filepath.Join(valueSegPair[0].Primary.DataDirectory, "pg_hba.conf")
-		hostSegValue := valueSegPair[0].Primary.Hostname
-		cmdStrSegValue := "whoami"
-		cmdSegvalue := exec.Command("ssh", hostSegValue, cmdStrSegValue)
-		outputSeg, errSeg := cmdSegvalue.Output()
+		MirrorHostName := valueSegPair[0].Mirror.Hostname
+		cmdStr := fmt.Sprintf("source %s/greenplum_path.sh && pg_ctl stop -m fast -D %s -w -t 120", os.Getenv("GPHOME"), valueSegPair[0].Mirror.DataDirectory)
+		cmdObj := exec.Command("ssh", MirrorHostName, cmdStr)
+		_, errSeg := cmdObj.Output()
 		if errSeg != nil {
 			t.Fatalf("unexpected error : %v", errSeg)
 		}
 
-		resultSeg := strings.TrimSpace(string(outputSeg))
-		cmdStrSeg := "ip -4 addr show | grep inet | grep -v 127.0.0.1/8 | awk '{print $2}'"
-		cmdSegValueNew := exec.Command("ssh", hostSegValue, cmdStrSeg)
-		outputSegNew, err := cmdSegValueNew.Output()
+		testutils.WaitForDesiredQueryResult(t, "", fmt.Sprintf("select status from gp_segment_configuration where role ='m' and datadir='%s'", valueSegPair[0].Mirror.DataDirectory), "d")
+
+		result, err = testutils.RunGpRecoverSeg()
 		if err != nil {
-			t.Fatalf("unexpected error : %v", err)
+			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
 		}
 
-		resultSegValue := string(outputSegNew)
-		firstValueNew := strings.Split(resultSegValue, "\n")[0]
-		pgHbaLineNew := fmt.Sprintf("host\tall\t%s\t%s\ttrust", resultSeg, firstValueNew)
-		cmdStrSegNew := fmt.Sprintf("/bin/bash -c 'cat %s | grep \"%s\"'", filePathSeg, pgHbaLineNew)
-		cmdSegNew := exec.Command("ssh", hostSegValue, cmdStrSegNew)
-		_, err = cmdSegNew.CombinedOutput()
-		if err != nil {
-			t.Fatalf("unexpected error : %v", err)
+		expectedOut = "[INFO]:-Segments successfully recovered"
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
 
 		_, err = testutils.DeleteCluster()
@@ -683,64 +619,4 @@ func TestPgHbaConfValidation(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
-
-	t.Run("pg_hba.conf replication entry validation in mirror segment", func(t *testing.T) {
-		var ok bool
-
-		configFile := testutils.GetTempFile(t, "config.json")
-		config := GetDefaultConfig(t)
-
-		err := config.WriteConfigAs(configFile)
-		if err != nil {
-			t.Fatalf("unexpected error: %#v", err)
-		}
-
-		SetConfigKey(t, configFile, "hba-hostnames", false, true)
-
-		result, err := testutils.RunInitCluster(configFile)
-		if err != nil {
-			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
-		}
-
-		primarySegs := config.Get("segment-array")
-		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
-
-		if !ok {
-			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
-		}
-
-		filePathSeg := filepath.Join(valueSegPair[0].Mirror.DataDirectory, "pg_hba.conf")
-		hostSegValue := valueSegPair[0].Mirror.Hostname
-		cmdStrSegValue := "whoami"
-		cmdSegvalue := exec.Command("ssh", hostSegValue, cmdStrSegValue)
-		outputSeg, errSeg := cmdSegvalue.Output()
-		if errSeg != nil {
-			t.Fatalf("unexpected error : %v", errSeg)
-		}
-		resultSeg := strings.TrimSpace(string(outputSeg))
-
-		primaryHostName := valueSegPair[0].Primary.Hostname
-		cmdStrSeg := "ip -4 addr show | grep inet | grep -v 127.0.0.1/8 | awk '{print $2}'"
-		cmdSegValueNew := exec.Command("ssh", primaryHostName, cmdStrSeg)
-		outputSegNew, err := cmdSegValueNew.Output()
-		if err != nil {
-			t.Fatalf("unexpected error : %v", err)
-		}
-
-		resultSegValue := string(outputSegNew)
-		firstValueNew := strings.Split(resultSegValue, "\n")[0]
-		pgHbaLineNew := fmt.Sprintf("host\treplication\t%s\t%s\ttrust", resultSeg, firstValueNew)
-		cmdStrSegNew := fmt.Sprintf("/bin/bash -c 'cat %s | grep \"%s\"'", filePathSeg, pgHbaLineNew)
-		cmdSegNew := exec.Command("ssh", hostSegValue, cmdStrSegNew)
-		_, err = cmdSegNew.CombinedOutput()
-		if err != nil {
-			t.Fatalf("unexpected error : %v", err)
-		}
-
-		_, err = testutils.DeleteCluster()
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-	})
-
 }

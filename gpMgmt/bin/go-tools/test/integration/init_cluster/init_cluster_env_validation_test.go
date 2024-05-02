@@ -273,4 +273,149 @@ func TestEnvValidation(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 	})
+
+	t.Run("when the mirror data directory is not empty", func(t *testing.T) {
+		var ok bool
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultConfig(t)
+
+		err := config.WriteConfigAs(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+
+		primarySegs := config.Get("segment-array")
+		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+
+		if !ok {
+			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
+		}
+
+		MirrorHostName := valueSegPair[0].Mirror.Hostname
+		cmdStr := fmt.Sprintf("mkdir -p %s && chmod 700 %s && touch %s/abc.txt", valueSegPair[0].Mirror.DataDirectory, valueSegPair[0].Mirror.DataDirectory, valueSegPair[0].Mirror.DataDirectory)
+
+		cmdObj := exec.Command("ssh", MirrorHostName, cmdStr)
+		_, errSeg := cmdObj.Output()
+		if errSeg != nil {
+			t.Fatalf("unexpected error : %v", errSeg)
+		}
+
+		result, err := testutils.RunInitCluster(configFile)
+		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
+			t.Fatalf("got %v, want exit status 1", err)
+		}
+
+		expectedOut := fmt.Sprintf("[ERROR]:-host: %s, executing pg_basebackup: pg_basebackup: error: directory \"%s\" exists but is not empty\n", MirrorHostName, valueSegPair[0].Mirror.DataDirectory)
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
+		}
+
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	// 	t.Run("when the port is already in use for mirror segment", func(t *testing.T) {
+	// 		//var value cli.Segment
+	// 		var ok bool
+
+	// 		configFile := testutils.GetTempFile(t, "config.json")
+	// 		config := GetDefaultConfig(t)
+
+	// 		err := config.WriteConfigAs(configFile)
+	// 		if err != nil {
+	// 			t.Fatalf("unexpected error: %#v", err)
+	// 		}
+
+	// 		primarySegs := config.Get("segment-array")
+	// 		valueSegPair, ok := primarySegs.([]cli.SegmentPair)
+
+	// 		if !ok {
+	// 			t.Fatalf("unexpected data type for segment-array %T", primarySegs)
+	// 		}
+
+	// 		MirrorHostName := valueSegPair[0].Primary.Hostname
+	// 		//MirrorPort := valueSegPair[0].Primary.Port
+
+	// 		sshCmd := fmt.Sprintf("net.Listen(\"tcp\", \":%d\")", valueSegPair[0].Primary.Port)
+	// 		fmt.Println(sshCmd)
+	// 		sshArgs := []string{MirrorHostName, sshCmd}
+	// 		cmd := exec.Command("ssh", sshArgs...)
+	// 		if err := cmd.Start(); err != nil {
+	// 			t.Fatalf("failed to start SSH command: %v", err)
+	// 		}
+	// 		defer cmd.Wait()
+
+	// 		// Wait for the listener to start
+	// 		time.Sleep(2 * time.Second)
+
+	// 		// sshCmd := fmt.Sprintf("net.Listen(\"tcp\", \":%d\")", MirrorPort)
+	// 		// cmdStr := fmt.Sprintf("go run -e '%s'", sshCmd)
+
+	// 		// cmd := exec.Command("ssh", MirrorHostName, cmdStr)
+	// 		// err1 := cmd.Start()
+	// 		// if err1 != nil {
+	// 		// 	log.Fatalf("failed to start SSH command: %v", err)
+	// 		// }
+
+	// 		// // Give some time for the listener to start
+	// 		// time.Sleep(2 * time.Second)
+
+	// 		// // Check if the listener is running
+	// 		// conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", MirrorHostName, MirrorPort))
+	// 		// if err != nil {
+	// 		// 	log.Fatalf("failed to connect to the mirror host: %v", err)
+	// 		// }
+	// 		// defer conn.Close()
+
+	// 		// fmt.Println("TCP listener is running on the mirror host.")
+
+	// 		//cmdStr := fmt.Sprintf("net.Listen(\"tcp\", net.JoinHostPort(\"%s\", \"%d\"))", valueSegPair[0].Mirror.Address, valueSegPair[0].Mirror.Port)
+	// 		//lis, err := net.Listen("tcp", net.JoinHostPort(value.Address, strconv.Itoa(value.Port)))
+
+	// 		// lis, err := net.Listen("tcp", net.JoinHostPort(valueSegPair[0].Mirror.Address, strconv.Itoa(valueSegPair[0].Mirror.Port)))
+	// 		// if err != nil {
+	// 		// 	t.Fatalf("unexpected error: %#v", err)
+	// 		// }
+	// 		// defer lis.Close()
+
+	// 		// cmdObj := exec.Command("ssh", MirrorHostName, cmdStr)
+	// 		// _, errSeg := cmdObj.Output()
+	// 		// if errSeg != nil {
+	// 		// 	t.Fatalf("unexpected error : %v", errSeg)
+	// 		// }
+
+	// 		// lis, err := net.Listen("tcp", net.JoinHostPort(valueSegPair[0].Mirror.Address, strconv.Itoa(valueSegPair[0].Mirror.Port)))
+	// 		// if err != nil {
+	// 		// 	t.Fatalf("unexpected error: %#v", err)
+	// 		// }
+	// 		// defer lis.Close()
+
+	// 		//BELOW IS  WORKING CODE
+	// 		// addr := fmt.Sprintf(":%d", valueSegPair[0].Mirror.Port)
+	// 		// server := &http.Server{Addr: addr}
+	// 		// go func() {
+	// 		// 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	// 		// 		t.Fatalf("failed to start HTTP server: %v", err)
+	// 		// 	}
+	// 		// }()
+	// 		// defer server.Shutdown(context.Background())
+
+	// 		result, err := testutils.RunInitCluster(configFile)
+	// 		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
+	// 			t.Fatalf("got %v, want exit status 1", err)
+	// 		}
+
+	// 		expectedOut := fmt.Sprintf("[ERROR]:-validating hosts: host: %s, ports already in use: [%d], check if cluster already running", valueSegPair[0].Mirror.Hostname, valueSegPair[0].Mirror.Port)
+	// 		if !strings.Contains(result.OutputMsg, expectedOut) {
+	// 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
+	// 		}
+
+	// 		_, err = testutils.DeleteCluster()
+	// 		if err != nil {
+	// 			t.Fatalf("unexpected error: %v", err)
+	// 		}
+	// 	})
+
 }
