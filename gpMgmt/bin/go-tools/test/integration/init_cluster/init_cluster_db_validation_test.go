@@ -1114,7 +1114,7 @@ func TestExpansionValidation(t *testing.T) {
 		}
 
 	})
-	t.Run("validate that the expansion creates data directories on different locations as specified in primary and mirro rbase-directories", func(t *testing.T) {
+	t.Run("validate that the expansion creates data directories on different locations as specified in primary and mirror base-directories", func(t *testing.T) {
 		configFile := testutils.GetTempFile(t, "config.json")
 		config := GetDefaultExpansionConfig(t)
 
