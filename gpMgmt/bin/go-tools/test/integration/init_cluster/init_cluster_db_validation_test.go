@@ -694,7 +694,7 @@ func TestExpansionValidation(t *testing.T) {
 		}
 	})
 
-	t.Run("check if mirror ports are adjusted as per coordinator port in all the hosts when not specified", func(t *testing.T) {
+	t.Run("check if mirror base ports are adjusted as per coordinator port in all the hosts when not specified", func(t *testing.T) {
 		var value cli.Segment
 		var ok bool
 		configFile := testutils.GetTempFile(t, "config.json")
@@ -725,6 +725,68 @@ func TestExpansionValidation(t *testing.T) {
 		expectedWarning := fmt.Sprintf("[WARNING]:-mirror-base-port value not specified. Setting default to: %d", coordinatorPort+1002)
 		if !strings.Contains(result.OutputMsg, expectedWarning) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedWarning)
+		}
+
+		expectedOut := "[INFO]:-Cluster initialized successfully"
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
+		}
+
+		conn := dbconn.NewDBConnFromEnvironment("postgres")
+		if err := conn.Connect(1); err != nil {
+			t.Fatalf("Error connecting to the database: %v", err)
+		}
+		defer conn.Close()
+
+		segConfigs, err := cluster.GetSegmentConfiguration(conn, false, true)
+		if err != nil {
+			t.Fatalf("Error getting segment configuration: %v", err)
+		}
+
+		var mirrorSegConfigs []cluster.SegConfig
+		hostList := (config.GetStringSlice("hostlist"))
+
+		for _, hostname := range hostList {
+			for _, seg := range segConfigs {
+				if seg.ContentID != -1 && seg.Role == "m" && seg.Hostname == hostname {
+					mirrorSegConfigs = append(mirrorSegConfigs, seg)
+				}
+			}
+			for i, seg := range mirrorSegConfigs {
+				expectedMirrorPort := coordinatorPort + 1002 + i
+				if seg.Port != expectedMirrorPort {
+					t.Fatalf("Mirror port mismatch for segment %s. Got: %d, Expected: %d", seg.Hostname, seg.Port, expectedMirrorPort)
+				}
+			}
+			mirrorSegConfigs = nil
+		}
+
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("verify expansion with mirror port specified", func(t *testing.T) {
+		var value cli.Segment
+		var ok bool
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultExpansionConfig(t)
+
+		err := config.WriteConfigAs(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+
+		coordinator := config.Get("coordinator")
+		if value, ok = coordinator.(cli.Segment); !ok {
+			t.Fatalf("unexpected data type for coordinator %T", value)
+		}
+		coordinatorPort := value.Port
+
+		result, err := testutils.RunInitCluster(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
 		}
 
 		expectedOut := "[INFO]:-Cluster initialized successfully"
@@ -1052,4 +1114,67 @@ func TestExpansionValidation(t *testing.T) {
 		}
 
 	})
+	t.Run("validate that the expansion creates data directories on different locations as specified in primary and mirro rbase-directories", func(t *testing.T) {
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultExpansionConfig(t)
+
+		err := config.WriteConfigAs(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %#v", err)
+		}
+
+		result, err := testutils.RunInitCluster(configFile)
+		if err != nil {
+			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
+		}
+
+		expectedOut := "[INFO]:-Cluster initialized successfully"
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
+		}
+
+		conn := dbconn.NewDBConnFromEnvironment("postgres")
+		if err := conn.Connect(1); err != nil {
+			t.Fatalf("Error connecting to the database: %v", err)
+		}
+		defer conn.Close()
+
+		segConfigs, err := cluster.GetSegmentConfiguration(conn, true)
+		if err != nil {
+			t.Fatalf("Error getting segment configuration: %v", err)
+		}
+
+		primaryBaseDirs := config.GetStringSlice("primary-data-directories")
+		mirrorBaseDirs := config.GetStringSlice("mirror-data-directories")
+		for _, seg := range segConfigs {
+			if seg.ContentID == -1 {
+				continue
+			}
+			dir := filepath.Dir(seg.DataDir)
+			var baseDirs []string
+			if seg.Role == "p" {
+				baseDirs = primaryBaseDirs
+			} else if seg.Role == "m" {
+				baseDirs = mirrorBaseDirs
+			} else {
+				continue
+			}
+			matched := false
+			for _, baseDir := range baseDirs {
+				if dir == baseDir {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				t.Fatalf("Segment directory %s is not created under any of the specified %s directories", seg.DataDir, seg.Role)
+			}
+		}
+
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
 }

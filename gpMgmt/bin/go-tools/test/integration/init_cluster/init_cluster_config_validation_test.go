@@ -641,6 +641,51 @@ func TestInputFileValidation(t *testing.T) {
 		}
 
 	})
+	t.Run("verify expansion with mirror support", func(t *testing.T) {
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultExpansionConfig(t)
+		if err := config.WriteConfigAs(configFile); err != nil {
+			t.Fatalf("failed to write config to file: %v", err)
+		}
+
+		result, err := testutils.RunInitCluster(configFile)
+		if err != nil {
+			t.Fatalf("Error while intializing cluster: %#v", err)
+		}
+
+		expectedOut := "[INFO]:-Cluster initialized successfully"
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
+		}
+
+		_, err = testutils.DeleteCluster()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+	})
+
+	t.Run("when segment-array is also specified along with the expansion parameter", func(t *testing.T) {
+		configFile := testutils.GetTempFile(t, "config.json")
+		config := GetDefaultExpansionConfig(t)
+
+		segmentArray := []interface{}{map[string]interface{}{}}
+		config.Set("segment-array", segmentArray)
+		if err := config.WriteConfigAs(configFile); err != nil {
+			t.Fatalf("failed to write config to file: %v", err)
+		}
+
+		result, err := testutils.RunInitCluster(configFile)
+		if e, ok := err.(*exec.ExitError); !ok || e.ExitCode() != 1 {
+			t.Fatalf("got %v, want exit status 1", err)
+		}
+
+		expectedOut := "[ERROR]:-cannot specify segments-array and primary-base-directories together"
+		if !strings.Contains(result.OutputMsg, expectedOut) {
+			t.Errorf("got %q, want %q", result.OutputMsg, expectedOut)
+		}
+
+	})
 }
 
 func GetDefaultConfig(t *testing.T) *viper.Viper {
