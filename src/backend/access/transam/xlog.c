@@ -5955,7 +5955,17 @@ pauseRecoveryOnRestorePoint(XLogReaderState *record)
 			{
 				reachedContinuousRecoveryTarget = true;
 				recoveryTargetAction = RECOVERY_TARGET_ACTION_PROMOTE;
+				return;
 			}
+
+			/*
+			 * The gp_pause_on_restore_point_replay GUC may have been updated
+			 * to a new restore point that exists on a timeline that we aren't
+			 * aware of yet. Check the off-line archival storage for any new
+			 * timeline history files.
+			 */
+			if (recoveryTargetTimeLineGoal == RECOVERY_TARGET_TIMELINE_LATEST)
+				rescanLatestTimeLine();
 		}
 	}
 }
