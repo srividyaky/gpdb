@@ -299,7 +299,7 @@ The time to wait on a lock before checking to see if there is a deadlock conditi
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
-|Any valid time expression \(number and unit\)|1s|local, system, restart|
+|Any valid time expression \(number and unit\)|1s|master, session, reload|
 
 ## <a id="debug_assertions"></a>debug\_assertions 
 
@@ -3654,4 +3654,3 @@ SET XML OPTION { DOCUMENT | CONTENT }
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |document, content|content|coordinator, session, reload|
-
