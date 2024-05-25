@@ -931,7 +931,9 @@ ExistValidLastrownums(Oid relid, int natts)
 }
 
 /*
- * Determine which attnums have an entry present in pg_attribute_encoding
+ * Determine which attnums have an entry present in pg_attribute_encoding and
+ * populate that information in 'attnum_entry_present', an array of size
+ * MaxHeapAttributeNumber.
  */
 void
 check_attribute_encoding_entry_exist(Oid relid, bool *attnum_entry_present)
@@ -944,7 +946,7 @@ check_attribute_encoding_entry_exist(Oid relid, bool *attnum_entry_present)
 
 	Assert(OidIsValid(relid));
 
-	MemSet(attnum_entry_present, false, sizeof(attnum_entry_present));
+	MemSet(attnum_entry_present, false, MaxHeapAttributeNumber);
 
 	rel = heap_open(AttributeEncodingRelationId, AccessShareLock);
 

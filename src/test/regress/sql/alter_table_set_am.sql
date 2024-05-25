@@ -580,7 +580,7 @@ DROP TABLE co2ao4;
 -- Scenario 8: Heap to AOCO
 SET gp_default_storage_options = 'blocksize=65536, compresstype=zlib, compresslevel=5, checksum=true';
 CREATE TABLE heap2co(a int, b int);
-CREATE TABLE heap2co2(a int, b int);
+CREATE TABLE heap2co2(a int, b int, c int, d int, e int, f int, g int, h int, i int);
 CREATE TABLE heap2co3(a int, b int);
 CREATE TABLE heap2co4(a int, b int);
 CREATE INDEX index_heap2co ON heap2co(b);
