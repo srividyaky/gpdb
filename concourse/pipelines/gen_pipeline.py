@@ -55,23 +55,6 @@ CI_VARS_PATH = os.path.join(os.getcwd(), '..', 'vars')
 
 default_os_type = 'rocky8'
 
-def suggested_git_remote():
-    """Try to guess the current git remote"""
-    default_remote = "<https://github.com/<github-user>/gpdb>"
-
-    remote = subprocess.check_output(["git", "ls-remote", "--get-url"]).decode('utf-8').rstrip()
-
-    if "greenplum-db/gpdb" in remote:
-        return default_remote
-
-    if "git@" in remote:
-        git_uri = remote.split('@')[1]
-        hostname, path = git_uri.split(':')
-        return 'https://%s/%s' % (hostname, path)
-
-    return remote
-
-
 def suggested_git_branch():
     """Try to guess the current git branch"""
     branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"]).decode('utf-8').rstrip()
@@ -214,7 +197,7 @@ def print_fly_commands(args, git_remote, git_branch):
     if args.directed_release: 
         print('NOTE: You can set the directed release pipeline with the following:\n')
         print(gen_pipeline(args, pipeline_name, ["common_prod.yml", "without_asserts_common_prod.yml"],
-                           "git@github.com:greenplum-db/gpdb.git", git_branch))
+                           git_remote, git_branch))
         return
     if args.pipeline_target == 'prod':
         print('NOTE: You can set the production pipelines with the following:\n')
@@ -222,9 +205,9 @@ def print_fly_commands(args, git_remote, git_branch):
         if args.os_type != default_os_type:
             pipeline_name += "_" + args.os_type
         print(gen_pipeline(args, pipeline_name, ["common_prod.yml"],
-                           "git@github.com:greenplum-db/gpdb.git", BASE_BRANCH))
+                           git_remote, BASE_BRANCH))
         print(gen_pipeline(args, "%s_without_asserts" % pipeline_name, ["common_prod.yml", "without_asserts_common_prod.yml"],
-                           "git@github.com:greenplum-db/gpdb.git", BASE_BRANCH))
+                           git_remote, BASE_BRANCH))
         return
 
     else:
@@ -355,7 +338,7 @@ def main():
     if args.pipeline_target in ['prod', 'dev', 'cm']:
         args.use_ICW_workers = True
 
-    git_remote = suggested_git_remote()
+    git_remote = "git@github.com:greenplum-db/gpdb.git"
     git_branch = suggested_git_branch()
 
     # if generating a dev pipeline but didn't specify an output,
