@@ -12,3 +12,4 @@ params:
   REMOTE_PORT:
   REMOTE_USER:
   REMOTE_KEY:
+  GIT_SSH_KEY:

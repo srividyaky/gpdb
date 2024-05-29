@@ -799,6 +799,7 @@ jobs:
       REMOTE_PORT: ((remote_win_port_build))
       REMOTE_USER: ((remote_win_user_build))
       REMOTE_KEY: ((remote_win_key_build))
+      GIT_SSH_KEY: ((server/gpdb-deploy-key))
   - put: bin_gpdb_clients_windows
     params:
       file: "gpdb_artifacts/greenplum-clients-x86_64.tar.gz"

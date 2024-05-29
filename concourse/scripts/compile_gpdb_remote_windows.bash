@@ -46,10 +46,14 @@ function remote_setup() {
 function remote_clone() {
     # Connect to remote windows server powershell environment and execute
     # the specified commands
+    set +x
+    echo "${GIT_SSH_KEY}" > ~/git.key
+    set -x
+    scp ~/git.key "${REMOTE_USER}"@"${REMOTE_HOST}":git.key
     ssh -A -T -p "${REMOTE_PORT}" "${REMOTE_USER}"@"${REMOTE_HOST}" <<- EOF
     mkdir "${WORK_DIR}"
     cd "${WORK_DIR}"
-    git clone "${GIT_URI}" gpdb_src
+    git clone git@github.com:greenplum-db/gpdb.git gpdb_src --config core.sshCommand="ssh -i ~/git.key"
     cd gpdb_src
     git reset --hard "${GIT_COMMIT}"
     git submodule update --init --recursive
