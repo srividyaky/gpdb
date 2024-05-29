@@ -23,6 +23,7 @@ brew install libxml2
 brew install pkg-config
 brew install perl
 brew install python3
+brew install python-setuptools
 
 brew link --force apr
 brew link --force apr-util
@@ -82,8 +83,8 @@ export LC_CTYPE="en_US.UTF-8"
 
 eval "$(/opt/homebrew/bin/brew shellenv)"
 export PATH="`brew --prefix`/opt/apr/bin:`brew --prefix`/opt/apr-util/bin:`brew --prefix`/opt/libxml2/bin:$PATH"
-export LDFLAGS="-L`brew --prefix`/opt/zstd/lib -L`brew --prefix`/opt/libevent/lib -L`brew --prefix`/opt/openssl/lib -L`brew --prefix`/opt/libxml2/lib -L`brew --prefix`/opt/libyaml/lib"
-export CPPFLAGS="-I`brew --prefix`/opt/zstd/include -I`brew --prefix`/opt/libevent/include -I`brew --prefix`/opt/openssl/include -I`brew --prefix`/opt/libxml2/include -I`brew --prefix`/opt/libyaml/include"
+export LDFLAGS="-L`brew --prefix`/opt/zstd/lib -L`brew --prefix`/opt/libevent/lib -L`brew --prefix`/opt/openssl/lib -L`brew --prefix`/opt/libxml2/lib -L`brew --prefix`/opt/libyaml/lib -L`brew --prefix`/opt/xerces-c/lib"
+export CPPFLAGS="-I`brew --prefix`/opt/zstd/include -I`brew --prefix`/opt/libevent/include -I`brew --prefix`/opt/openssl/include -I`brew --prefix`/opt/libxml2/include -I`brew --prefix`/opt/libyaml/include -I`brew --prefix`/opt/xerces-c/include"
 EOF
 source ~/.bashrc
 
