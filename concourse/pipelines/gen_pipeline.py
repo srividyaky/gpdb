@@ -214,7 +214,7 @@ def print_fly_commands(args, git_remote, git_branch):
     if args.directed_release: 
         print('NOTE: You can set the directed release pipeline with the following:\n')
         print(gen_pipeline(args, pipeline_name, ["common_prod.yml", "without_asserts_common_prod.yml"],
-                           "https://github.com/greenplum-db/gpdb.git", git_branch))
+                           "git@github.com:greenplum-db/gpdb.git", git_branch))
         return
     if args.pipeline_target == 'prod':
         print('NOTE: You can set the production pipelines with the following:\n')
@@ -222,9 +222,9 @@ def print_fly_commands(args, git_remote, git_branch):
         if args.os_type != default_os_type:
             pipeline_name += "_" + args.os_type
         print(gen_pipeline(args, pipeline_name, ["common_prod.yml"],
-                           "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH))
+                           "git@github.com:greenplum-db/gpdb.git", BASE_BRANCH))
         print(gen_pipeline(args, "%s_without_asserts" % pipeline_name, ["common_prod.yml", "without_asserts_common_prod.yml"],
-                           "https://github.com/greenplum-db/gpdb.git", BASE_BRANCH))
+                           "git@github.com:greenplum-db/gpdb.git", BASE_BRANCH))
         return
 
     else:

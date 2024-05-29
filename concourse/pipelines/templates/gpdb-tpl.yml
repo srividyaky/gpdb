@@ -417,6 +417,7 @@ resources:
   type: git
   source:
     branch: ((gpdb-git-branch))
+    private_key: ((server/gpdb-deploy-key))
     uri: ((gpdb-git-remote))
     ignore_paths:
     - gpdb-doc/*
@@ -545,7 +546,8 @@ resources:
   icon: git
   source:
     branch: main
-    uri: https://github.com/greenplum-db/greenplum-database-release.git
+    private_key: ((releng/greenplum-database-release-read-deploy-key))
+    uri: git@github.com:greenplum-db/greenplum-database-release.git
 
 - name: license_file
   type: gcs
