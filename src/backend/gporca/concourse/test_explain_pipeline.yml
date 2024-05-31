@@ -61,10 +61,11 @@ resources:
   type: git
   source:
     branch: main
+    private_key: ((server/gpdb-deploy-key))
     paths:
     - concourse/**
     - src/backend/gporca/concourse/**
-    uri: https://github.com/greenplum-db/gpdb
+    uri: git@github.com:greenplum-db/gpdb.git
 
 ## resources for workload1
 - name: explain_output_((workload1))_branch
@@ -235,6 +236,8 @@ jobs:
   - do:
     - task: init_gpdb_src
       image: gpdb7-rhel8-build
+      params:
+        GIT_SSH_KEY: ((server/gpdb-deploy-key))
       config:
         platform: linux
         run:
@@ -242,11 +245,15 @@ jobs:
           args:
           - -c
           - |
+            mkdir -p ~/.ssh
+            ssh-keyscan github.com > ~/.ssh/known_hosts
+            echo "${GIT_SSH_KEY}" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
             BRANCH=$(cut -d, -f1 gporca-commits-to-test/gpdb_remote_info.txt)
             REMOTE=$(cut -d, -f2 gporca-commits-to-test/gpdb_remote_info.txt)
             git clone -b $BRANCH $REMOTE gpdb_src &&
             cd gpdb_src &&
-            git fetch https://github.com/greenplum-db/gpdb.git --tags &&
+            git fetch git@github.com:greenplum-db/gpdb.git --tags &&
             git submodule update --init --recursive
         inputs: [{ name: gporca-commits-to-test }]
         outputs: [{ name: gpdb_src }]
@@ -273,6 +280,8 @@ jobs:
   - do:
     - task: init_gpdb_src
       image: gpdb7-rhel8-build
+      params:
+        GIT_SSH_KEY: ((server/gpdb-deploy-key))
       config:
         platform: linux
         run:
@@ -280,11 +289,15 @@ jobs:
           args:
           - -c
           - |
+            mkdir -p ~/.ssh
+            ssh-keyscan github.com > ~/.ssh/known_hosts
+            echo "${GIT_SSH_KEY}" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
             BRANCH=$(cut -d, -f1 gporca-commits-to-test/gpdb_baseline_info.txt)
             REMOTE=$(cut -d, -f2 gporca-commits-to-test/gpdb_baseline_info.txt)
             git clone -b $BRANCH $REMOTE gpdb_src &&
             cd gpdb_src &&
-            git fetch https://github.com/greenplum-db/gpdb.git --tags &&
+            git fetch git@github.com:greenplum-db/gpdb.git --tags &&
             git submodule update --init --recursive
         inputs: [{ name: gporca-commits-to-test }]
         outputs: [{ name: gpdb_src }]
