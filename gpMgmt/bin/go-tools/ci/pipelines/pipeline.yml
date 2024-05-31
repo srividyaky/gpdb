@@ -97,6 +97,7 @@ resources:
     type: git
     source:
       branch: ((gpdb-git-branch))
+      private_key: ((server/gpdb-deploy-key))
       uri: ((gpdb-git-remote))
       ignore_paths:
       - gpdb-doc/*
