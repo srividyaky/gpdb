@@ -76,23 +76,23 @@ make pipeline GIT_REMOTE=<Custom Remote> GIT_BRANCH=<Custom Branch>
 make pipeline PIPELINE_NAME=<Custom-Pipeline-Name> 
 ```
 
-## Running gp utility
-Following are the basic steps to run gp utility:
-- Configure gp services
+## Running gpservice utility
+Following are the basic steps to run gpservice utility:
+- Initialise gpservice
 - Controlling Agent and Hub services
 - Monitoring service status
 
-#### Configure gp services:
+#### Initialise gpservice:
 This is one-time activity required to generate the required configuration
 for the hub and agents. Also, this command copies generated config file to all
 the hosts using gpsync followed by service registration.
 
 ```
-gp configure       # to generate config file with given conf setting
-gp configure --help  # to view the config options
+gpservice init         # to generate config file with given conf setting
+gpservice init --help  # to view the config options
 
 example:
-gp configure --host <host> --server-certificate <path/to/server-cert.pem> --server-key < path/to/server-key.pem> --ca-certificate <path/to/ca-cert.pem> --ca-key <path/to/ca-key.pem>
+gpservice init --host <host> --server-certificate <path/to/server-cert.pem> --server-key < path/to/server-key.pem> --ca-certificate <path/to/ca-cert.pem>
 ```
 
 #### Control and monitoring services:
@@ -101,15 +101,13 @@ Agent and Hub Services can be controlled and monitored using the following comma
 gp [start/stop/status] [agents/hub/services]
 ```
 e.g.
-- `gp start hub` starts the hub service
-- `gp start services` starts both hub and agent services
-- `gp stop services` stops both hub and agent services
+- `gpservice start --hub` starts the hub service
+- `gpservice start` starts both hub and agent services
+- `gpservice stop` stops both hub and agent services
 
 ##### Monitoring Service Status:
 To check the status of the services you can use the following command:
-- `gp status agents` reports status of all agents service
-- `gp status hub` reports the status of the hub service
-- `gp status services` reports the status of the hub and agent services
+- `gpservice status` reports the status of the hub and agent services
 
 #### Log Locations
 Logs are located in the path provided in the configuration file.
