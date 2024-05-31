@@ -737,6 +737,14 @@ The local content id if a segment.
 |-----------|-------|-------------------|
 |integer| |read only|
 
+## <a id="gp_cpu_decompress_cost"></a>gp\_cpu\_decompress\_cost
+
+Sets the planner's estimate of the cost of decompressing a varblock for append-optimized tables.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Floating point \>= 0|1|coordinator, session, reload|
+
 ## <a id="gp_create_table_random_default_distribution"></a>gp\_create\_table\_random\_default\_distribution 
 
 Controls table creation when a Greenplum Database table is created with a CREATE TABLE or CREATE TABLE AS command that does not contain a DISTRIBUTED BY clause.
@@ -879,7 +887,7 @@ The default value is `off`; the Postgres-based planner chooses the best aggregat
 
 ## <a id="gp_enable_agg_distinct"></a>gp\_enable\_agg\_distinct 
 
- Activates or deactivates  two-phase aggregation to compute a single distinct-qualified aggregate. This applies only to subqueries that include a single distinct-qualified aggregate function.
+ Activates or deactivates two-phase aggregation to compute a single distinct-qualified aggregate. This applies only to subqueries that include a single distinct-qualified aggregate function.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
@@ -887,15 +895,23 @@ The default value is `off`; the Postgres-based planner chooses the best aggregat
 
 ## <a id="gp_enable_agg_distinct_pruning"></a>gp\_enable\_agg\_distinct\_pruning 
 
- Activates or deactivates  three-phase aggregation and join to compute distinct-qualified aggregates. This applies only to subqueries that include one or more distinct-qualified aggregate functions.
+ Activates or deactivates three-phase aggregation and join to compute distinct-qualified aggregates. This applies only to subqueries that include one or more distinct-qualified aggregate functions.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
 |Boolean|on|coordinator, session, reload|
 
+## <a id="p_enable_ao_indexscan"></a>gp\_enable\_ao\_indexscan
+
+Activates or deactivates regular index scans for append-optimized tables.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|true|coordinator, session, reload|
+
 ## <a id="gp_enable_direct_dispatch"></a>gp\_enable\_direct\_dispatch 
 
- Activates or deactivates  the dispatching of targeted query plans for queries that access data on a single segment. When on, queries that target rows on a single segment will only have their query plan dispatched to that segment \(rather than to all segments\). This significantly reduces the response time of qualifying queries as there is no interconnect setup involved. Direct dispatch does require more CPU utilization on the coordinator.
+ Activates or deactivates the dispatching of targeted query plans for queries that access data on a single segment. When on, queries that target rows on a single segment will only have their query plan dispatched to that segment \(rather than to all segments\). This significantly reduces the response time of qualifying queries as there is no interconnect setup involved. Direct dispatch does require more CPU utilization on the coordinator.
 
 |Value Range|Default|Set Classifications|
 |-----------|-------|-------------------|
