@@ -333,10 +333,11 @@ To achieve good recall, keep the following in mind:
 2. Choose an appropriate number of `lists`. A reasonable initial value is `rows / 1000` for up to 1M rows and `sqrt(rows)` for over 1M rows.
 3. When querying, specify an appropriate number of [probes](#query-options) (higher is better for recall, lower is better for speed). A reasonable initial value is `sqrt(lists)`.
 
-**NOTE:** dimension limitation for index
-- `vector` supports up to 2,000 dimensions.
-- `halfvec` supports up to 4,000 dimensions.
-- `binary vector` supports up to 64,000 dimensions.
+Dimension limitations for index types:
+
+- `vector`: supports up to 2,000 dimensions.
+- `halfvec`: supports up to 4,000 dimensions.
+- `binary vector`: supports up to 64,000 dimensions.
 
 The following examples show how to add an index for various distance methods.
 
@@ -588,4 +589,3 @@ The following examples use `pgvector` and the VMware Greenplum documentation to 
 
 - [Building large-scale AI-powered search in Greenplum using pgvector and OpenAI](https://medium.com/greenplum-data-clinics/building-large-scale-ai-powered-search-in-greenplum-using-pgvector-and-openai-4f5c5811f54a)
 - [ask-greenplum](https://github.com/yihong0618/ask-greenplum)
-
