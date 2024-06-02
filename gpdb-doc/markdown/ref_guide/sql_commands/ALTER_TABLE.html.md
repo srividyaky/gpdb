@@ -562,7 +562,7 @@ FOR ('value')
 
 The key word `COLUMN` is noise and can be omitted.
 
-When a column is added with `ADD COLUMN`, all existing rows in the table are initialized with the column's default value, or `NULL` if no `DEFAULT` clause is specified. Adding a column with a non-null default or changing the type of an existing column will require the entire table and indexes to be rewritten. As an exception, if the `USING` clause does not change the column contents and the old type is either binary coercible to the new type or an unconstrained domain over the new type, a table rewrite is not needed, but any indexes on the affected columns must still be rebuilt. Table and/or index rebuilds may take a significant amount of time for a large table; and will temporarily require as much as double the disk space.
+When a column is added with `ADD COLUMN`, all existing rows in the table are initialized with the column's default value, or `NULL` if no `DEFAULT` clause is specified. Adding a column with a non-null default or changing the type of an existing column in an Append-Optimized, Column-Oriented table or an Append-Optimized table does not require rewriting the entire table and its indexes. See the table in this section for details on which Data Definition Language (DDL) types can skip table rewrites for various table types.
 
 Adding a `CHECK` or `NOT NULL` constraint requires scanning the table to verify that existing rows meet the constraint, but does not require a table rewrite.
 
@@ -925,4 +925,3 @@ The forms `ADD` (without `USING INDEX`), `DROP [COLUMN]`, `DROP IDENTITY`, `REST
 [CREATE TABLE](CREATE_TABLE.html), [DROP TABLE](DROP_TABLE.html)
 
 **Parent topic:** [SQL Commands](../sql_commands/sql_ref.html)
-
