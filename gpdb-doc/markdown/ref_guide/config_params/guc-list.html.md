@@ -595,6 +595,14 @@ Enables compacting segment files during `VACUUM` commands. When deactivated, `VA
 |-----------|-------|-------------------|
 |Boolean|on|coordinator, session, reload|
 
+## <a id="gp_appendonly_compaction_segfile_limit"></a>gp\_appendonly\_compaction\_segfile\_limit
+
+Sets the minimum number of available segment files for inserts. If the number of available segment files falls below this limit, compaction is skipped to prevent excessive segments entering the `AWAITING_DROP` state. This GUC protects against segment file exhaustion. `VACUUM`, when run with concurrent transactions having older snapshots, can retain segment files in the `AWAITING_DROP` state. 
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|0 to 127|10|coordinator, session, reload|
+
 ## <a id="gp_appendonly_compaction_threshold"></a>gp\_appendonly\_compaction\_threshold 
 
 Specifies the threshold ratio \(as a percentage\) of hidden rows to total rows that triggers compaction of the segment file when VACUUM is run without the FULL option \(a lazy vacuum\). If the ratio of hidden rows in a segment file on a segment is less than this threshold, the segment file is not compacted, and a log message is issued.
