@@ -2971,6 +2971,8 @@ CExpressionPreprocessor::PcnstrFromChildPartition(
 		return nullptr;
 	}
 
+	CColRefArray *pdrgpcrOutputNoSysCols = GPOS_NEW(mp) CColRefArray(mp);
+
 	// Create a list of indexes into the columns of the table descriptor of the
 	// child partition. This is used in PexprTranslateScalar() to construct a
 	// reverse mapping from the colid of  each (non-dropped) column in the child
@@ -2982,15 +2984,24 @@ CExpressionPreprocessor::PcnstrFromChildPartition(
 	for (ULONG ul = 0; ul < pdrgpcrOutput->Size(); ++ul)
 	{
 		CColRef *colref = (*pdrgpcrOutput)[ul];
+		// Do not map system columns since partition constraints can't be defined on system columns.
+		// Additionally, AO tables do not contain some system columns(cmin, xmin, cmax, xmax)
+		// which will lead to added complexity if we want to map between a heap root and ao child.
+		if (colref->IsSystemCol())
+		{
+			continue;
+		}
 		ULONG *colid = root_col_mapping->Find(colref);
 		GPOS_ASSERT(nullptr != colid);
 		mapped_colids->Append(GPOS_NEW(mp) ULONG(*colid));
+		pdrgpcrOutputNoSysCols->Append(colref);
 	}
 
 	CTranslatorDXLToExpr dxltr(mp, md_accessor);
-	part_constraint_expr =
-		dxltr.PexprTranslateScalar(dxlnode, pdrgpcrOutput, mapped_colids);
+	part_constraint_expr = dxltr.PexprTranslateScalar(
+		dxlnode, pdrgpcrOutputNoSysCols, mapped_colids);
 	mapped_colids->Release();
+	pdrgpcrOutputNoSysCols->Release();
 
 	GPOS_ASSERT(CUtils::FPredicate(part_constraint_expr));
 

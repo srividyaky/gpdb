@@ -3600,3 +3600,49 @@ DETAIL:  Falling back to Postgres-based planner because GPORCA does not support 
 (10 rows)
 
 drop table dqa_f3;
+-- Test multi-dqa on ao table
+set optimizer_enable_multiple_distinct_aggs=on;
+-- Setup
+drop table if exists dqa_ao;
+NOTICE:  table "dqa_ao" does not exist, skipping
+create table dqa_ao(i int) with (appendonly=true);
+insert into dqa_ao values(1);
+analyze dqa_ao;
+-- Test query
+explain (verbose, costs off) select count(distinct (i%5)) cnt1 ,count(distinct (i%10)) cnt2 from dqa_ao;
+                                                                                       QUERY PLAN                                                                                       
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sequence
+   Output: (count(DISTINCT (share0_ref3.i % 5))), (count(DISTINCT (share0_ref2.i % 10)))
+   ->  Shared Scan (share slice:id 0:0)
+         Output: share0_ref1.i, share0_ref1.ctid, share0_ref1.tableoid, share0_ref1.gp_segment_id
+         ->  Gather Motion 3:1  (slice1; segments: 3)
+               Output: dqa_ao.i, dqa_ao.ctid, dqa_ao.tableoid, dqa_ao.gp_segment_id
+               ->  Seq Scan on public.dqa_ao
+                     Output: dqa_ao.i, dqa_ao.ctid, dqa_ao.tableoid, dqa_ao.gp_segment_id
+   ->  Nested Loop
+         Output: (count(DISTINCT (share0_ref3.i % 5))), (count(DISTINCT (share0_ref2.i % 10)))
+         Join Filter: true
+         ->  Aggregate
+               Output: count(DISTINCT (share0_ref3.i % 5))
+               ->  Shared Scan (share slice:id 0:0)
+                     Output: share0_ref3.i, share0_ref3.ctid, share0_ref3.tableoid, share0_ref3.gp_segment_id
+         ->  Materialize
+               Output: (count(DISTINCT (share0_ref2.i % 10)))
+               ->  Aggregate
+                     Output: count(DISTINCT (share0_ref2.i % 10))
+                     ->  Shared Scan (share slice:id 0:0)
+                           Output: share0_ref2.i, share0_ref2.ctid, share0_ref2.tableoid, share0_ref2.gp_segment_id
+ Optimizer: GPORCA
+ Settings: enable_groupagg = 'off', gp_eager_two_phase_agg = 'on', gp_enable_agg_distinct_pruning = 'off', gp_motion_cost_per_row = '1', optimizer_enable_multiple_distinct_aggs = 'on'
+(23 rows)
+
+select count(distinct (i%5)) cnt1 ,count(distinct (i%10)) cnt2 from dqa_ao;
+ cnt1 | cnt2 
+------+------
+    1 |    1
+(1 row)
+
+-- Cleanup
+drop table dqa_ao;
+reset optimizer_enable_multiple_distinct_aggs;

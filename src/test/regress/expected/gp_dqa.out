@@ -3309,3 +3309,42 @@ select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f
 (10 rows)
 
 drop table dqa_f3;
+-- Test multi-dqa on ao table
+set optimizer_enable_multiple_distinct_aggs=on;
+-- Setup
+drop table if exists dqa_ao;
+NOTICE:  table "dqa_ao" does not exist, skipping
+create table dqa_ao(i int) with (appendonly=true);
+insert into dqa_ao values(1);
+analyze dqa_ao;
+-- Test query
+explain (verbose, costs off) select count(distinct (i%5)) cnt1 ,count(distinct (i%10)) cnt2 from dqa_ao;
+                                                                                                QUERY PLAN                                                                                                 
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate
+   Output: count(DISTINCT ((i % 5))), count(DISTINCT ((i % 10)))
+   ->  Gather Motion 3:1  (slice1; segments: 3)
+         Output: (PARTIAL count(DISTINCT ((i % 5)))), (PARTIAL count(DISTINCT ((i % 10))))
+         ->  Partial Aggregate
+               Output: PARTIAL count(DISTINCT ((i % 5))), PARTIAL count(DISTINCT ((i % 10)))
+               ->  Redistribute Motion 3:3  (slice2; segments: 3)
+                     Output: i, ((i % 5)), ((i % 10)), (AggExprId)
+                     Hash Key: ((i % 5)), ((i % 10)), (AggExprId)
+                     ->  TupleSplit
+                           Output: i, ((i % 5)), ((i % 10)), AggExprId
+                           Split by Col: (((dqa_ao.i % 5))), (((dqa_ao.i % 10)))
+                           ->  Seq Scan on public.dqa_ao
+                                 Output: i, (i % 5), (i % 10)
+ Optimizer: Postgres-based planner
+ Settings: enable_groupagg = 'off', gp_eager_two_phase_agg = 'on', gp_enable_agg_distinct_pruning = 'off', gp_motion_cost_per_row = '1', optimizer = 'off', optimizer_enable_multiple_distinct_aggs = 'on'
+(16 rows)
+
+select count(distinct (i%5)) cnt1 ,count(distinct (i%10)) cnt2 from dqa_ao;
+ cnt1 | cnt2 
+------+------
+    1 |    1
+(1 row)
+
+-- Cleanup
+drop table dqa_ao;
+reset optimizer_enable_multiple_distinct_aggs;

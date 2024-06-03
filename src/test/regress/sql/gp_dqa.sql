@@ -635,3 +635,17 @@ select count(distinct c), count(distinct d), to_char(corr(distinct b, a), '9.999
 select count(distinct a), count(distinct b), sum(a), sum(b), count(*) from dqa_f3 group by c order by c;
 
 drop table dqa_f3;
+
+-- Test multi-dqa on ao table
+set optimizer_enable_multiple_distinct_aggs=on;
+-- Setup
+drop table if exists dqa_ao;
+create table dqa_ao(i int) with (appendonly=true);
+insert into dqa_ao values(1);
+analyze dqa_ao;
+-- Test query
+explain (verbose, costs off) select count(distinct (i%5)) cnt1 ,count(distinct (i%10)) cnt2 from dqa_ao;
+select count(distinct (i%5)) cnt1 ,count(distinct (i%10)) cnt2 from dqa_ao;
+-- Cleanup
+drop table dqa_ao;
+reset optimizer_enable_multiple_distinct_aggs;

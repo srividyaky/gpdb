@@ -918,6 +918,20 @@ CTranslatorRelcacheToDXL::AddSystemColumns(CMemoryPool *mp,
 
 		const FormData_pg_attribute *att_tup = SystemAttributeDefinition(attno);
 
+		// pg_attribute is not storing xmin, cmin, xmax, cmax column entries for AO tables
+		// See commit https://github.com/greenplum-db/gpdb/commit/fd426814dec4f0f59aafe7daf15ce905ff2dafdf
+		IMDRelation::Erelstoragetype rel_storage_type =
+			RetrieveRelStorageType(rel);
+		if ((attno == MinTransactionIdAttributeNumber ||
+			 attno == MinCommandIdAttributeNumber ||
+			 attno == MaxTransactionIdAttributeNumber ||
+			 attno == MaxCommandIdAttributeNumber) &&
+			(rel_storage_type == IMDRelation::ErelstorageAppendOnlyRows ||
+			 rel_storage_type == IMDRelation::ErelstorageAppendOnlyCols))
+		{
+			continue;
+		}
+
 		// get system name for that attribute
 		const CWStringConst *sys_colname = GPOS_NEW(mp)
 			CWStringConst(CDXLUtils::CreateDynamicStringFromCharArray(
