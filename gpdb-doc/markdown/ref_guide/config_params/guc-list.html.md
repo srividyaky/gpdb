@@ -1021,6 +1021,14 @@ Enable `LIMIT` operation to be performed while sorting. Sorts more efficiently w
 |-----------|-------|-------------------|
 |Boolean|on|coordinator, session, reload|
 
+## <a id="gp_enable_statement_trigger"></a>gp\_enable\_statement\_trigger
+
+Activates or deactivates statement trigger creation when restoring from a VMware Greenplum 6 cluster to a VMware Greenplum 7 cluster.
+
+|Value Range|Default|Set Classifications|
+|-----------|-------|-------------------|
+|Boolean|false|coordinator, session, reload|
+
 ## <a id="gp_external_enable_exec"></a>gp\_external\_enable\_exec 
 
  Activates or deactivates  the use of external tables that run OS commands or scripts on the segment hosts \(`CREATE EXTERNAL TABLE EXECUTE` syntax\). Must be enabled if using the VMware Greenplum Command Center.
