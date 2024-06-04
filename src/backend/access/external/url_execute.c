@@ -644,5 +644,7 @@ static void
 pclose_without_stderr(int *pipes)
 {
 	close(pipes[EXEC_DATA_P]);
+	pipes[EXEC_DATA_P] = -1;
 	close(pipes[EXEC_ERR_P]);
+	pipes[EXEC_ERR_P] = -1;
 }

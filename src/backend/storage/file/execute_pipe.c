@@ -202,10 +202,12 @@ pclose_with_stderr(int pid, int *pipes, StringInfo sinfo)
 
 	/* close the data pipe. we can now read from error pipe without being blocked */
 	close(pipes[EXEC_DATA_P]);
+	pipes[EXEC_DATA_P] = -1;
 
 	read_err_msg(pipes[EXEC_ERR_P], sinfo);
 
 	close(pipes[EXEC_ERR_P]);
+	pipes[EXEC_ERR_P] = -1;
 
 	/*
 	 * Reap the child shell, as pclose() would have.
