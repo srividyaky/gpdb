@@ -53,7 +53,13 @@ static void read_err_msg(int fid, StringInfo sinfo);
  * XXX: Even though we have the ability to extract the child's stderr, we do
  * lose out on updates/protections from upstream (such as the niceties with
  * fd.c and SIGPIPE handling that are available with OpenPipeStream()). So we
- * should consider augmenting OpenPipeStream() and using that instead.
+ * should consider augmenting OpenPipeStream() and using that instead. We have
+ * aligned it closer to upstream (transaction cleanup), but there is serious
+ * room for improvement. Ideally, both external tables and COPY PROGRAM should
+ * use general functionality from fd.c. So, we should explore the idea of moving
+ * this to fd.c and bringing the pipes opened under this routine under the
+ * purview of the server (allocatedDescs and the like)
+
  */
 int
 popen_with_stderr(int *pipes, const char *exe, bool forwrite)
@@ -201,13 +207,17 @@ pclose_with_stderr(int pid, int *pipes, StringInfo sinfo)
 
 	close(pipes[EXEC_ERR_P]);
 
-	if (kill(pid, 0) == 0) /* process exists */
+	/*
+	 * Reap the child shell, as pclose() would have.
+	 * See https://pubs.opengroup.org/onlinepubs/9699919799/functions/pclose.html
+	 */
+	while (waitpid(pid, &status, 0) == (pid_t) -1)
 	{
-	#ifndef WIN32
-		waitpid(pid, &status, 0);
-	#else
-		status = -1;
-	#endif
+		if (errno != EINTR)
+		{
+			status = -1;
+			break;
+		}
 	}
 
 	return status;

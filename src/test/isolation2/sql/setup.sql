@@ -586,3 +586,44 @@ end if; /* in func */
 end loop; /* in func */
 end; /* in func */
 $$ language plpgsql;
+
+-- Function to count the number of open pipes for a specific backend.
+CREATE OR REPLACE FUNCTION count_child_pipes(backend_pid int, content int) RETURNS INTEGER AS $$
+import subprocess
+# PIPE on Darwin, FIFO on Linux (yes even pipes are designated as FIFOs in lsof)
+cmd = f"lsof -p {backend_pid} | grep -E 'PIPE|FIFO' | wc -l"
+# deduct 1 for coordinator
+num_child_pipes = int(subprocess.check_output(cmd, shell=True).decode())
+if content == -1:
+    num_child_pipes = num_child_pipes - 1
+return num_child_pipes
+$$ LANGUAGE plpython3u;
+
+-- Function to print any descendant processes of a given Postgres backend
+CREATE OR REPLACE FUNCTION get_descendant_process_info(backend_pid int)
+    RETURNS TABLE(pg_backend_pid int, descendant_proc text) AS $$
+import psutil
+
+try:
+    parent = psutil.Process(backend_pid)
+    children = parent.children(recursive=True)
+    return [(backend_pid, child) for child in children]
+except psutil.NoSuchProcess:
+    return []
+$$ LANGUAGE plpython3u;
+
+-- Function to send a signal to a child process of a Postgres backend
+CREATE OR REPLACE FUNCTION kill_children(backend_pid int, sig int)
+    RETURNS VOID AS $$
+import os
+import psutil
+
+parent = psutil.Process(backend_pid)
+children = parent.children(recursive=True)
+try:
+    for child in children:
+       child.send_signal(sig)
+except psutil.NoSuchProcess:
+    pass
+
+$$ LANGUAGE plpython3u;

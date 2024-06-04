@@ -283,7 +283,7 @@ static void FreeDistributionData(GpDistributionData *distData);
 static void InitCopyFromDispatchSplit(CopyState cstate, GpDistributionData *distData, EState *estate);
 static unsigned int GetTargetSeg(GpDistributionData *distData, TupleTableSlot *slot);
 static ProgramPipes *open_program_pipes(char *command, bool forwrite);
-static void close_program_pipes(CopyState cstate, bool ifThrow);
+static void close_program_pipes(CopyState cstate);
 CopyIntoClause*
 MakeCopyIntoClause(CopyStmt *stmt);
 static List *parse_joined_option_list(char *str, char *delimiter);
@@ -595,7 +595,7 @@ CopySendEndOfRow(CopyState cstate)
 						 * error message from the subprocess' exit code than
 						 * just "Broken Pipe"
 						 */
-						close_program_pipes(cstate, true);
+						close_program_pipes(cstate);
 
 						/*
 						 * If close_program_pipes() didn't throw an error,
@@ -681,7 +681,7 @@ CopyToDispatchFlush(CopyState cstate)
 						 * error message from the subprocess' exit code than
 						 * just "Broken Pipe"
 						 */
-						close_program_pipes(cstate, true);
+						close_program_pipes(cstate);
 
 						/*
 						 * If close_program_pipes() didn't throw an error,
@@ -752,7 +752,7 @@ CopyGetData(CopyState cstate, void *databuf, int datasize)
 				{
 					int olderrno = errno;
 
-					close_program_pipes(cstate, true);
+					close_program_pipes(cstate);
 
 					/*
 					 * If close_program_pipes() didn't throw an error,
@@ -1296,6 +1296,10 @@ DoCopy(ParseState *pstate, const CopyStmt *stmt,
 				cstate->cdbCopy = NULL;
 				MemoryContextSwitchTo(oldcontext);
 			}
+
+			if (cstate->is_program)
+				close_program_pipes(cstate);
+
 			PG_RE_THROW();
 		}
 		PG_END_TRY();
@@ -2336,7 +2340,7 @@ EndCopy(CopyState cstate)
 {
 	if (cstate->is_program)
 	{
-		close_program_pipes(cstate, true);
+		close_program_pipes(cstate);
 	}
 	else
 	{
@@ -8057,13 +8061,21 @@ open_program_pipes(char *command, bool forwrite)
 	return program_pipes;
 }
 
+/*
+ * Cleanup the DATA and ERR pipes if they are still open to:
+ * (1) Avoid leaking fds (that will stay open for the entire lifetime of the backend).
+ * (2) Avoid leaving the shell and children still running.
+ * (3) Avoid leaving the shell as a zombie (we reap the shell by a call to
+ *     waitpid() inside pclose_with_stderr()).
+ */
 static void
-close_program_pipes(CopyState cstate, bool ifThrow)
+close_program_pipes(CopyState cstate)
 {
 	Assert(cstate->is_program);
 
 	int ret = 0;
 	StringInfoData sinfo;
+
 	initStringInfo(&sinfo);
 
 	if (cstate->copy_file)
@@ -8074,32 +8086,29 @@ close_program_pipes(CopyState cstate, bool ifThrow)
 
 	/* just return if pipes not created, like when relation does not exist */
 	if (!cstate->program_pipes)
-	{
 		return;
-	}
-	
-	ret = pclose_with_stderr(cstate->program_pipes->pid, cstate->program_pipes->pipes, &sinfo);
 
-	if (ret == 0 || !ifThrow)
-	{
-		return;
-	}
+	ret = pclose_with_stderr(cstate->program_pipes->pid,
+							 cstate->program_pipes->pipes,
+							 &sinfo);
+	pfree(cstate->program_pipes);
+	cstate->program_pipes = NULL;
+
+	if (ret == 0)
+		return; /* PROGRAM terminated normally, nothing to do */
 
 	if (ret == -1)
 	{
-		/* pclose()/wait4() ended with an error; errno should be valid */
 		ereport(ERROR,
 				(errcode_for_file_access(),
-				 errmsg("can not close pipe: %m")));
+				 errmsg("could not close pipe: %m")));
 	}
-	else if (!WIFSIGNALED(ret))
+	else
 	{
-		/*
-		 * pclose() returned the process termination state.
-		 */
 		ereport(ERROR,
-				(errcode(ERRCODE_SQL_ROUTINE_EXCEPTION),
-				 errmsg("command error message: %s", sinfo.data)));
+				(errcode(ERRCODE_EXTERNAL_ROUTINE_EXCEPTION),
+				 errmsg("%s", wait_result_to_str(ret)),
+				 errdetail("command error message: %s", sinfo.data)));
 	}
 }
 

@@ -274,6 +274,7 @@ test: idle_gang_cleaner
 test: autovacuum-temp-table
 
 test: copy_progress
+test: copy_program_errors
 
 # Tests for FTS
 test: fts_errors
