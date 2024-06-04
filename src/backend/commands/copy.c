@@ -1288,19 +1288,25 @@ DoCopy(ParseState *pstate, const CopyStmt *stmt,
 		}
 		PG_CATCH();
 		{
+			MemoryContext 	oldcontext;
+			ErrorData		*edata;
+
+			oldcontext = MemoryContextSwitchTo(cstate->copycontext);
+			edata = CopyErrorData();
+			FlushErrorState();
+
 			if (cstate->cdbCopy)
 			{
-				MemoryContext oldcontext = MemoryContextSwitchTo(cstate->copycontext);
-
 				cdbCopyAbort(cstate->cdbCopy);
 				cstate->cdbCopy = NULL;
-				MemoryContextSwitchTo(oldcontext);
 			}
 
 			if (cstate->is_program)
 				close_program_pipes(cstate);
 
-			PG_RE_THROW();
+			MemoryContextSwitchTo(oldcontext);
+
+			ReThrowError(edata);
 		}
 		PG_END_TRY();
 		EndCopyFrom(cstate);
