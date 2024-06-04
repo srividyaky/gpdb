@@ -116,11 +116,11 @@ func RunInitClusterCmd(cmd *cobra.Command, args []string) error {
 		if len(args) == 1 {
 			return fmt.Errorf("cannot provide config file with --clean")
 		}
-		return InitClean(false)
-	}
 
-	if cliCleanFlag && cliForceFlag {
-		return fmt.Errorf("cannot use --clean and --force together")
+		if cliCleanFlag && cliForceFlag {
+			return fmt.Errorf("cannot use --clean and --force together")
+		}
+		return InitClean(false)
 	}
 
 	if len(args) == 0 {
