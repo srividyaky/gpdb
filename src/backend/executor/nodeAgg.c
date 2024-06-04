@@ -1865,11 +1865,10 @@ hash_agg_set_limits(AggState *aggstate, double hashentrysize, double input_group
 	Size partition_mem;
 	uint64 strict_memlimit = work_mem;
 
+	/* aggstate is NULL during cost_agg */
 	if (aggstate)
 	{
-		uint64 operator_mem = PlanStateOperatorMemKB((PlanState *) aggstate);
-		if (operator_mem < strict_memlimit)
-			strict_memlimit = operator_mem;
+		strict_memlimit = PlanStateOperatorMemKB((PlanState *) aggstate);
 	}
 
 	/* if not expected to spill, use all of work_mem */
@@ -2137,11 +2136,10 @@ hash_choose_num_partitions(AggState *aggstate, double input_groups, double hashe
 	int		partition_bits;
 	uint64	strict_memlimit = work_mem;
 
+	/* aggstate is NULL during cost_agg */
 	if (aggstate)
 	{
-		uint64 operator_mem = PlanStateOperatorMemKB((PlanState *) aggstate);
-		if (operator_mem < strict_memlimit)
-			strict_memlimit = operator_mem;
+		strict_memlimit = PlanStateOperatorMemKB((PlanState *) aggstate);
 	}
 
 	/*
