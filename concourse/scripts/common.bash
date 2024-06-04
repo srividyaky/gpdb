@@ -151,11 +151,19 @@ function configure() {
     popd
 }
 
+# Add packages required by plpython3 here.
+function setup_python_for_plpython3u() {
+    pushd gpdb_src
+    pip3.11 --retries 10 install psutil
+    popd
+}
+
 function install_and_configure_gpdb() {
     install_gpdb
     setup_llvm
     setup_configure_vars
     configure
+    setup_python_for_plpython3u
 }
 
 function make_cluster() {
