@@ -113,6 +113,17 @@ keep_minimal_cgroup_dirs() {
 EOF
 }
 
+# Add packages required by plpython3 here.
+setup_python_for_plpython3u() {
+    local gpdb_host_alias=$1
+
+    ssh $gpdb_host_alias bash -ex <<EOF
+        pip3.11 --retries 10 install psutil
+EOF
+}
+
+setup_python_for_plpython3u cdw
+setup_python_for_plpython3u ccp-${CLUSTER_NAME}-0
 
 mount_cgroups ccp-${CLUSTER_NAME}-0
 make_cgroups_dir ccp-${CLUSTER_NAME}-0
