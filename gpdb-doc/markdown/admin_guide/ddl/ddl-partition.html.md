@@ -97,7 +97,7 @@ The following table provides a feature comparison to help you choose the syntax 
 | Heterogeneous partition hierarchy | Not supported. All leaf partitions are at the same level. | Supported. Leaf partitions are permitted at different levels. You can specify different partitioning rules for individual child tables, including different partition columns and different partitioning strategies. |
 | Expressions in partition key | Not supported. | Supported. |
 | Multi-column range partitioning | Not supported. | Supported. |
-| Multi-column list partitioning | Supported (via composite type). | Not supported. |
+| [Multi-column list partitioning](#multi-column-list-partition) | Supported (via composite type). | Not supported. |
 | Hash partitioning | Not supported. | Supported. |
 | Adding a Partition | Adding a partition acquires an `ACCESS EXCLUSIVE` lock on the parent table. | Attaching a partition acquires a less restrictive `SHARE UPDATE EXCLUSIVE` lock on the parent table. |
 | Removing a Partition | Dropping a partition deletes the table contents. Must create a dummy table and swap. | Supported. Can directly detach a partition, retaining the table contents. |
@@ -616,6 +616,116 @@ ALTER TABLE msales DETACH PARTITION msales_2021;
 ALTER TABLE msales ATTACH PARTITION msales_2021_new FOR VALUES FROM (2021) TO (2022);
 ```
 
+## <a id="multi-column-list-partition"></a>Multi-column List Partitioning 
+
+Greenplum 6 supports multi-column list partitioning. However, this feature is no longer supported in Greenplum 7. The Postgres 12 merge in Greenplum 7 introduced significant changes to the partitioning Data Definition Language (DDL). For more information, see [Choosing the Partitioning Syntax](#choose).
+
+Here is an example of a multi-column list partition in Greenplum 6:
+
+```sql
+CREATE TABLE part (
+    id INT,
+    date_col DATE,
+    b TEXT,
+    c TEXT
+)
+PARTITION BY RANGE (date_col)
+    SUBPARTITION BY LIST (b, c)
+      SUBPARTITION TEMPLATE (
+        SUBPARTITION aa VALUES('a', 'a'),
+        SUBPARTITION ab VALUES('a', 'b'),
+        SUBPARTITION ba VALUES('b', 'a'),
+        SUBPARTITION bb VALUES('b', 'b')
+      )
+(START ('01-01-2020') END ('01-01-2022') EVERY (interval '1 year'));
+```
+
+To address this syntax change, consider the following two options:
+
+### <a id="multi-level-list"></a>Option 1: Multi-level List Partitioning
+
+Instead of using multi-column list partitions, subpartition the subpartition. In the example below, subpartition by `b` text and then subpartition by `c` text. This creates the same number of leaf partitions as with multi-column list partitioning in Greenplum 6, however, it will create some extra interior partitions for the first level of list partitioning.
+
+```sql
+CREATE TABLE part (
+    id INT,
+    date_col DATE,
+    b TEXT,
+    c TEXT
+)
+PARTITION BY RANGE (date_col)
+    SUBPARTITION BY LIST (b)
+        SUBPARTITION TEMPLATE (
+            SUBPARTITION a VALUES('a'),
+            SUBPARTITION b VALUES('b')
+        )
+        SUBPARTITION BY LIST (c)
+            SUBPARTITION TEMPLATE (
+                SUBPARTITION a VALUES('a'),
+                SUBPARTITION b VALUES('b')
+            )
+(START ('01-01-2020') END ('01-01-2022') EVERY (INTERVAL '1 year'));
+
+-- See the hierarchy:
+SELECT * FROM gp_toolkit.gp_partitions;
+```
+
+### <a id="composite-type-list"></a>Option 2: Composite Type List Partitioning
+
+You can achieve the same result by using modern syntax and a composite type as follows:
+
+```sql
+-- Create composite type
+CREATE TYPE text_composite AS (b TEXT, c TEXT);
+
+-- Create root
+CREATE TABLE part (
+    id INT,
+    date_col DATE,
+    val text_composite
+) PARTITION BY RANGE (date_col);
+
+-- Create level 1 partitions
+CREATE TABLE part_2020 PARTITION OF part 
+    FOR VALUES FROM ('01-01-2020') TO ('12-31-2020') 
+    PARTITION BY LIST (val);
+
+CREATE TABLE part_2021 PARTITION OF part 
+    FOR VALUES FROM ('01-01-2021') TO ('12-31-2021') 
+    PARTITION BY LIST (val);
+
+-- Create level 2 partitions (list)
+CREATE TABLE part_2020_aa PARTITION OF part_2020 
+    FOR VALUES IN (ROW('a', 'a'));
+CREATE TABLE part_2020_ab PARTITION OF part_2020 
+    FOR VALUES IN (ROW('a', 'b'));
+CREATE TABLE part_2020_ba PARTITION OF part_2020 
+    FOR VALUES IN (ROW('b', 'a'));
+CREATE TABLE part_2020_bb PARTITION OF part_2020 
+    FOR VALUES IN (ROW('b', 'b'));
+
+CREATE TABLE part_2021_aa PARTITION OF part_2021 
+    FOR VALUES IN (ROW('a', 'a'));
+CREATE TABLE part_2021_ab PARTITION OF part_2021 
+    FOR VALUES IN (ROW('a', 'b'));
+CREATE TABLE part_2021_ba PARTITION OF part_2021 
+    FOR VALUES IN (ROW('b', 'a'));
+CREATE TABLE part_2021_bb PARTITION OF part_2021 
+    FOR VALUES IN (ROW('b', 'b'));
+
+-- See the hierarchy:
+SELECT * FROM gp_toolkit.gp_partitions;
+```
+
+### <a id="compare"></a>Comparing the Two Options
+
+The table below outlines the pros and cons of both options:
+
+|          |  Option 1: Multi-level List Partitioning    |     Option 2: Composite Type List Partitioning            |
+|----------|---------------------------------------------|-----------------------------------------------------------|
+| **Pros** | Queries (DML, SELECT) do not need to change. | Number of partitions stays the same as legacy multi-column. |
+| **Cons** |           More interior partitions.          | Queries (SELECTs, DML) referencing the composite list partition key will have to change. |
+
 ## <a id="best_pract"></a>Best Practices
 
 Choose the table partitioning strategy carefully, as the performance of query planning and execution can be negatively affected by poor design.
@@ -677,4 +787,3 @@ These (*classic syntax*) `ALTER TABLE ... ALTER PARTITION` operations are not su
 -   Setting or dropping a `NOT NULL` constraint of column.
 -   Adding or dropping constraints.
 -   Splitting an external partition.
-
