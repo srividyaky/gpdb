@@ -1,0 +1,71 @@
+--
+-- Test that having an incomplete set of mirrors do not cause dtx recovery dispatch
+-- to panic/segfault besides just error/retry.
+-- We could have this kind of state during gpinitsystem or gpexpand.
+--
+
+!\retcode gpconfig -c gp_dtx_recovery_interval -v 5;
+(exited with code 0)
+!\retcode gpstop -u;
+(exited with code 0)
+
+select pg_catalog.gp_add_segment_primary('localhost', 'localhost', 8001, '/non/exist/path1');
+ gp_add_segment_primary 
+------------------------
+ 9                      
+(1 row)
+select pg_catalog.gp_add_segment_primary('localhost', 'localhost', 8002, '/non/exist/path2');
+ gp_add_segment_primary 
+------------------------
+ 10                     
+(1 row)
+select pg_catalog.gp_add_segment_primary('localhost', 'localhost', 8003, '/non/exist/path3');
+ gp_add_segment_primary 
+------------------------
+ 11                     
+(1 row)
+select pg_catalog.gp_add_segment_mirror(3::int2, 'localhost', 'localhost', 9001, '/non/exist/path4');
+ gp_add_segment_mirror 
+-----------------------
+ 12                    
+(1 row)
+
+-- check that the dtx recovery process has done at least one dispatch w/o panic/segfault.
+select gp_inject_fault('dtx_recovery_dispatch_caught_error', 'skip', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+select gp_wait_until_triggered_fault('dtx_recovery_dispatch_caught_error', 1, dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_wait_until_triggered_fault 
+-------------------------------
+ Success:                      
+(1 row)
+select gp_inject_fault('dtx_recovery_dispatch_caught_error', 'reset', dbid) from gp_segment_configuration where role = 'p' and content = -1;
+ gp_inject_fault 
+-----------------
+ Success:        
+(1 row)
+
+-- restore
+-1U: select pg_catalog.gp_remove_segment(dbid) from gp_segment_configuration where content = 3;
+ gp_remove_segment 
+-------------------
+ t                 
+ t                 
+(2 rows)
+-1U: select pg_catalog.gp_remove_segment(dbid) from gp_segment_configuration where content = 4;
+ gp_remove_segment 
+-------------------
+ t                 
+(1 row)
+-1U: select pg_catalog.gp_remove_segment(dbid) from gp_segment_configuration where content = 5;
+ gp_remove_segment 
+-------------------
+ t                 
+(1 row)
+
+!\retcode gpconfig -r gp_dtx_recovery_interval;
+(exited with code 0)
+!\retcode gpstop -u;
+(exited with code 0)

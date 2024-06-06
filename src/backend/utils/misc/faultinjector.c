@@ -271,6 +271,7 @@ checkBgProcessSkipFault(const char* faultName)
 		/* dtx recovery process */
 		 if (0 != strcmp("before_orphaned_check", faultName) &&
 				0 != strcmp("after_orphaned_check", faultName) &&
+				0 != strcmp("dtx_recovery_dispatch_caught_error", faultName) &&
 				0 != strcmp("post_in_doubt_tx_in_progress", faultName) &&
 				0 != strcmp("post_progress_recovery_comitted", faultName))
 		{

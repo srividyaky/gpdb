@@ -316,6 +316,8 @@ gatherRMInDoubtTransactions(int prepared_seconds, bool raiseError)
 	}
 	PG_CATCH();
 	{
+		SIMPLE_FAULT_INJECTOR("dtx_recovery_dispatch_caught_error");
+
 		cdbdisp_clearCdbPgResults(&cdb_pgresults);
 
 		if (raiseError)

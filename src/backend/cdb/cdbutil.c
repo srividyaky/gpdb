@@ -86,8 +86,8 @@ static void cleanupComponentIdleQEs(CdbComponentDatabaseInfo *cdi, bool includeW
 
 static int	CdbComponentDatabaseInfoCompare(const void *p1, const void *p2);
 
-static GpSegConfigEntry * readGpSegConfigFromCatalog(int *total_dbs);
-static GpSegConfigEntry * readGpSegConfigFromFTSFiles(int *total_dbs);
+static GpSegConfigEntry * readGpSegConfigFromCatalog(int *total_dbs, bool *fully_mirrored);
+static GpSegConfigEntry * readGpSegConfigFromFTSFiles(int *total_dbs, bool *fully_mirrored);
 
 static void getAddressesForDBid(GpSegConfigEntry *c, int elevel);
 static HTAB *hostPrimaryCountHashTableInit(void);
@@ -122,12 +122,19 @@ typedef struct HostPrimaryCountEntry
  *
  * readGpSegConfigFromFTSFiles() notify FTS to dump the configs from catalog
  * to a flat file and then read configurations from that file.
+ *
+ * Upon successful return, set the number of total db entries (including
+ * coordinator and segments) in *total_dbs. Optionally set whether this is a 
+ * fully mirrored cluster (i.e. there's an equal number of primary and mirror
+ * segments) in *fully_mirrored.
  */
 static GpSegConfigEntry *
-readGpSegConfigFromFTSFiles(int *total_dbs)
+readGpSegConfigFromFTSFiles(int *total_dbs, bool *fully_mirrored)
 {
 	FILE	*fd;
 	int		idx = 0;
+	int		num_primaries = 0;
+	int		num_mirrors = 0;
 	int		array_size = 500;
 	GpSegConfigEntry *configs = NULL;
 	GpSegConfigEntry *config = NULL;
@@ -165,6 +172,13 @@ readGpSegConfigFromFTSFiles(int *total_dbs)
 		config->address = pstrdup(address);
 		config->datadir = pstrdup(datadir);
 
+		if (config->segindex >= 0)
+		{
+			if (config->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
+				num_primaries++;
+			else
+				num_mirrors++;
+		}
 		idx++;
 		/*
 		 * Expand CdbComponentDatabaseInfo array if we've used up
@@ -181,6 +195,8 @@ readGpSegConfigFromFTSFiles(int *total_dbs)
 	FreeFile(fd);
 
 	*total_dbs = idx;
+	if (fully_mirrored)
+		*fully_mirrored = num_primaries == num_mirrors;
 	return configs;
 }
 
@@ -208,7 +224,7 @@ writeGpSegConfigToFTSFiles(void)
 	if (!fd)
 		elog(ERROR, "could not create tmp file: %s: %m", GPSEGCONFIGDUMPFILETMP);
 
-	configs = readGpSegConfigFromCatalog(&total_dbs); 
+	configs = readGpSegConfigFromCatalog(&total_dbs, NULL); 
 
 	for (idx = 0; idx < total_dbs; idx++)
 	{
@@ -231,11 +247,21 @@ writeGpSegConfigToFTSFiles(void)
 			 GPSEGCONFIGDUMPFILETMP, GPSEGCONFIGDUMPFILE);
 }
 
+/*
+ * Read the segment configuration from the gp_segment_configuration catalog.
+ *
+ * Upon successful return, set the number of total db entries (including
+ * coordinator and segments) in *total_dbs. Optionally set whether this is a 
+ * fully mirrored cluster (i.e. there's an equal number of primary and mirror
+ * segments) in *fully_mirrored.
+ */
 static GpSegConfigEntry *
-readGpSegConfigFromCatalog(int *total_dbs)
+readGpSegConfigFromCatalog(int *total_dbs, bool *fully_mirrored)
 {
 	int					idx = 0;
 	int					array_size;
+	int					num_primaries = 0;
+	int					num_mirrors = 0;
 	bool				isNull;
 	Datum				attr;
 	Relation			gp_seg_config_rel;
@@ -307,6 +333,14 @@ readGpSegConfigFromCatalog(int *total_dbs)
 
 		idx++;
 
+		if (config->segindex >= 0)
+		{
+			if (config->role == GP_SEGMENT_CONFIGURATION_ROLE_PRIMARY)
+				num_primaries++;
+			else
+				num_mirrors++;
+		}
+
 		/*
 		 * Expand CdbComponentDatabaseInfo array if we've used up
 		 * currently allocated space
@@ -327,6 +361,8 @@ readGpSegConfigFromCatalog(int *total_dbs)
 	table_close(gp_seg_config_rel, AccessShareLock);
 
 	*total_dbs = idx;
+	if (fully_mirrored)
+		*fully_mirrored = num_primaries == num_mirrors;
 	return configs;
 }
 
@@ -344,6 +380,7 @@ getCdbComponentInfo(void)
 	int			i;
 	int			x = 0;
 	int			total_dbs = 0;
+	bool 			fully_mirrored;
 
 	bool		found;
 	HostPrimaryCountEntry *hsEntry;
@@ -359,9 +396,9 @@ getCdbComponentInfo(void)
 	HTAB	   *hostPrimaryCountHash = hostPrimaryCountHashTableInit();
 
 	if (IsTransactionState())
-		configs = readGpSegConfigFromCatalog(&total_dbs);
+		configs = readGpSegConfigFromCatalog(&total_dbs, &fully_mirrored);
 	else
-		configs = readGpSegConfigFromFTSFiles(&total_dbs);
+		configs = readGpSegConfigFromFTSFiles(&total_dbs, &fully_mirrored);
 
 	component_databases = palloc0(sizeof(CdbComponentDatabases));
 
@@ -376,10 +413,29 @@ getCdbComponentInfo(void)
 	component_databases->entry_db_info =
 		(CdbComponentDatabaseInfo *) palloc0(sizeof(CdbComponentDatabaseInfo) * 2);
 
+	/*
+	 * Populate the entry_db_info and segment_db_info. Both will be organized as below:
+	 *
+	 * [primary seg0][mirror seg0][primary seg1][mirror seg1][primary seg2][mirror seg2]
+	 *
+	 * Note that, however, if the cluster is not fully mirrored (i.e. the number of 
+	 * primaries does not equal to the number of mirrors), we will ignore the mirrors
+	 * completely in segment_db_info. It will be like this:
+	 *
+	 * [primary seg0][primary seg1][primary seg2]
+	 *
+	 * ...which is the same as a mirrorless cluster. We have code that assumed the cluster
+	 * configuration could only be one of the above two formations, e.g. cdbcomponent_getComponentInfo().
+	 * So it is important to maintain that assumption.
+	 */
 	for (i = 0; i < total_dbs; i++)
 	{
 		CdbComponentDatabaseInfo	*pRow;
 		GpSegConfigEntry	*config = &configs[i];
+
+		/* ignore mirror if not fully mirrored */
+		if (config->role == GP_SEGMENT_CONFIGURATION_ROLE_MIRROR && !fully_mirrored)
+			continue;
 
 		if (config->hostname == NULL || strlen(config->hostname) > MAXHOSTNAMELEN)
 		{
@@ -1039,7 +1095,12 @@ cdbcomponent_getComponentInfo(int contentId)
 	/* with mirror, segment_db_info is sorted by content id */
 	if (cdbs->total_segment_dbs != cdbs->total_segments)
 	{
-		Assert(cdbs->total_segment_dbs == cdbs->total_segments * 2);
+		if (cdbs->total_segment_dbs != cdbs->total_segments * 2)
+			ereport(FATAL,
+					(errcode(ERRCODE_DATA_EXCEPTION),
+					 errmsg("unexpected total segment dbs %d and total content IDs %d",
+							cdbs->total_segment_dbs, cdbs->total_segments),
+					 errhint("Cluster configuration is not mirrorless nor fully-mirrored.")));
 		cdbInfo = &cdbs->segment_db_info[2 * contentId];
 
 		/* use the other segment if it is not what the QD wants */
