@@ -4,12 +4,13 @@ import "time"
 
 // gpservice configuration specific constants
 const (
-	DefaultHubPort          = 4242
-	DefaultAgentPort        = 8000
-	DefaultServiceName      = "gpservice"
-	ConfigFileName          = "gpservice.conf"
-	PlatformDarwin          = "darwin"
-	PlatformLinux           = "linux"
+	DefaultHubPort     = 4242
+	DefaultAgentPort   = 8000
+	DefaultServiceName = "gpservice"
+	ConfigFileName     = "gpservice.conf"
+	PlatformDarwin     = "darwin"
+	PlatformLinux      = "linux"
+	DefaultGpCtlName   = "gpctl"
 )
 
 const (
