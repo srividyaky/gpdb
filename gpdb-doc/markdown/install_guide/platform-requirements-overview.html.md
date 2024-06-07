@@ -6,9 +6,13 @@ This topic describes the Greenplum Database 7 platform and operating system soft
 
 Greenplum Database 7 runs on the following operating system platforms:
 
--   Red Hat Enterprise Linux 64-bit 8.7 or later 
--   Oracle Linux 64-bit 8.7 or later, using the Red Hat Compatible Kernel \(RHCK\)
--   Rocky Linux 8.7 or later
+- Red Hat Enterprise Linux 8.7 or later
+- Red Hat Enterprise Linux 9.x or later
+- Oracle Linux 8.7 or later, using the Red Hat Compatible Kernel (RHCK)
+- Oracle Linux 9.x or later, using the Red Hat Compatible Kernel (RHCK)
+- Rocky Linux 8.7 or later
+- Rocky Linux 9.x or later
+
 
 > **Note** If you use endpoint security software on your Greenplum Database hosts, it may affect your database performance and stability. See [About Endpoint Security Sofware](../security-guide/topics/preface.html#endpoint_security) for more information.
 
@@ -98,14 +102,18 @@ sudo update-alternatives set python /usr/bin/python3.11
 
 VMware releases a Clients tool package on various platforms that can be used to access Greenplum Database from a client system. The Greenplum 7 Clients tool package is supported on the following platforms:
 
--   Red Hat Enterprise Linux x86\_64 8.x \(RHEL 8\)
--   Oracle Linux 64-bit 8, using the Red Hat Compatible Kernel \(RHCK\)
--   Rocky Linux 8
--   Windows 10 \(64-bit\) 
--   Windows 8 \(64-bit\)
--   Windows Server 2012 \(64-bit\)
--   Windows Server 2012 R2 \(64-bit\)
--   Windows Server 2008 R2 \(64-bit\) 
+- Red Hat Enterprise Linux 8.x or later
+- Red Hat Enterprise Linux 9.x or later
+- Oracle Linux 8.x or later, using the Red Hat Compatible Kernel (RHCK)
+- Oracle Linux 9.x or later, using the Red Hat Compatible Kernel (RHCK)
+- Rocky Linux 8.x or later
+- Rocky Linux 9.x or later
+- Windows 10 (64-bit)
+- Windows 8 (64-bit)
+- Windows Server 2012 (64-bit)
+- Windows Server 2012 R2 (64-bit)
+- Windows Server 2008 R2 (64-bit)
+
 
 The Greenplum 7 Clients package includes the client and loader programs plus database/role/language commands and the Greenplum Streaming Server command utilities. Refer to [Greenplum Client and Loader Tools Package](/vmware/client_tool_guides/intro.html) for installation and usage details of the Greenplum 7 Client tools.
 
@@ -428,4 +436,3 @@ The best instance type to use in Azure is "Standard_H8" which is one of the High
 | ------------- | ------ | ----- | ---------- |
 | D13_v2        | 56     | 8     | 2          |
 | H8            | 56     | 8     | 2          |
-
