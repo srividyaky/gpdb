@@ -143,8 +143,10 @@ def parseargs():
                       help='number of tables to expand at a time. Valid values are 1-%d.' % MAX_PARALLEL_EXPANDS)
     parser.add_option('-v', '--verbose', action='store_true',
                       help='debug output.')
-    parser.add_option('-S', '--simple-progress', action='store_true',
-                      help='show simple progress.')
+    parser.add_option('-S', '--simple-progress', default=True, action='store_true',
+                      dest='simple_progress', help='show simple progress.')
+    parser.add_option('-D', '--detailed-progress', action='store_false',
+                      dest='simple_progress', help='show detailed progress.')
     parser.add_option('-t', '--tardir', default='.', metavar="FILE",
                       help='Tar file directory.')
     parser.add_option('-h', '-?', '--help', action='help',

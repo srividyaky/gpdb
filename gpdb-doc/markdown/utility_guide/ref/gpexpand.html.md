@@ -14,6 +14,7 @@ gpexpand [{-f|--hosts-file} <hosts_file>]
         | {-c|--clean}
         [-v|--verbose] [-s|--silent]
         [{-t|--tardir} <directory> ]
+        [-D|--detailed-progress ]
         [-S|--simple-progress ]
 
 gpexpand -? | -h | --help 
@@ -110,10 +111,16 @@ To begin the redistribution phase, run `gpexpand` with no options or with the `-
 -s \| --silent
 :   Runs in silent mode. Does not prompt for confirmation to proceed on warnings.
 
+-D \| --detailed-progress
+:   If specified, the `gpexpand` utility records detailed progress information in the Greenplum Database table *gpexpand.expansion\_progress*, including the relation size information and status information in the table *gpexpand.status\_detail*.
+
+:   Specifying this option does incur higher per-table performance overhead.
+
+
 -S \| --simple-progress
 :   If specified, the `gpexpand` utility records only the minimum progress information in the Greenplum Database table *gpexpand.expansion\_progress*. The utility does not record the relation size information and status information in the table *gpexpand.status\_detail*.
 
-:   Specifying this option can improve performance by reducing the amount of progress information written to the *gpexpand* tables.
+:   This is the default, due to its lower overhead.
 
 \[-t \| --tardir\] directory
 :   The fully qualified path to a directory on segment hosts where the `gpexpand` utility copies a temporary tar file. The file contains Greenplum Database files that are used to create segment instances. The default directory is the user home directory.
