@@ -6,8 +6,8 @@ ccp_src/scripts/setup_ssh_to_cluster.sh
 
 scp cluster_env_files/hostfile_all cdw:/tmp
 tar -xzf gp_binary/gp.tgz
-scp gpctl cdw:/home/gpadmin/
-scp gpservice cdw:/home/gpadmin/
+scp gpctl/gpctl cdw:/home/gpadmin/
+scp gpservice/gpservice cdw:/home/gpadmin/
 
 ssh -n cdw "
     set -eux -o pipefail

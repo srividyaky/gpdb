@@ -59,7 +59,7 @@ func TestStatusSuccess(t *testing.T) {
 			_, _ = testutils.RunStart()
 			gpCfg = testutils.ParseConfig(testutils.DefaultConfigurationFile)
 
-			// Running the gp status command
+			// Running the gpservice status command
 			result, err := testutils.RunStatus(tc.cliParams...)
 			// check for command result
 			if err != nil {
@@ -147,7 +147,6 @@ func TestStatusSuccessHelp(t *testing.T) {
 		cliParams   []string
 		expectedOut []string
 	}{
-		//this is failing, bug is raised for error message
 		{
 			name: "status command with invalid param shows help",
 			cliParams: []string{
@@ -180,7 +179,7 @@ func TestStatusSuccessHelp(t *testing.T) {
 	for _, tc := range TestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			testutils.InitService(*hostfile, testutils.CertificateParams)
-			testutils.RunStart()
+			_, _ = testutils.RunStart()
 			result, err := testutils.RunStatus(tc.cliParams...)
 			// check for command result
 			if err != nil {
