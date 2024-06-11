@@ -10,7 +10,6 @@ import (
 	"github.com/greenplum-db/gpdb/gpservice/constants"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 	"github.com/greenplum-db/gpdb/gpservice/test/integration/testutils"
-	//"github.com/greenplum-db/gpdb/gp/utils"
 )
 
 func TestConfigureHelp(t *testing.T) {

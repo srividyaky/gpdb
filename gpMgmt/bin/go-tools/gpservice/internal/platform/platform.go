@@ -249,7 +249,7 @@ func (p GpPlatform) ReloadAgentService(gpHome string, hostnames []string, servic
 
 	gpsshCmd := &greenplum.GpSSH{
 		Hostnames: hostnames,
-		Command:   fmt.Sprintf("%s daemon-reload", p.UserArg),
+		Command:   fmt.Sprintf("%s %s daemon-reload", p.ServiceCmd, p.UserArg),
 	}
 	out, err := utils.RunGpSourcedCommand(gpsshCmd, gpHome)
 	if err != nil {
