@@ -2,6 +2,8 @@ package cli_test
 
 import (
 	"errors"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
+	"github.com/greenplum-db/gpdb/gpservice/testutils/exectest"
 	"os"
 	"os/exec"
 	"strings"
@@ -11,8 +13,6 @@ import (
 	"github.com/greenplum-db/gpdb/gpservice/idl"
 	"github.com/greenplum-db/gpdb/gpservice/idl/mock_idl"
 	"github.com/greenplum-db/gpdb/gpservice/internal/cli"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils/exectest"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/gpservice_config"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 )
@@ -69,7 +69,7 @@ Agent     sdw1      running   123       5H
 			t.Fatalf("got %s, want %s", stdout, expectedStdout)
 		}
 	})
-	
+
 	t.Run("errors out when not able to display the hub status", func(t *testing.T) {
 		resetConf := cli.SetConf(testutils.CreateDummyServiceConfig(t))
 		defer resetConf()
@@ -86,12 +86,12 @@ Agent     sdw1      running   123       5H
 		_, err := testutils.ExecuteCobraCommand(t, cli.StatusCmd())
 		writer.Close()
 		stdout := <-buffer
-		
+
 		var expectedErr *exec.ExitError
 		if !errors.As(err, &expectedErr) {
 			t.Errorf("got %T, want %T", err, expectedErr)
 		}
-		
+
 		expectedErrPrefix := "failed to get service status:"
 		if !strings.HasPrefix(err.Error(), expectedErrPrefix) {
 			t.Fatalf("got %v, want %s", err, expectedErrPrefix)
@@ -102,7 +102,7 @@ Agent     sdw1      running   123       5H
 			t.Fatalf("got %s, want %s", stdout, expectedStdout)
 		}
 	})
-	
+
 	t.Run("errors out when not able to display the agent status", func(t *testing.T) {
 		resetConf := cli.SetConf(testutils.CreateDummyServiceConfig(t))
 		defer resetConf()
@@ -131,7 +131,7 @@ Agent     sdw1      running   123       5H
 		_, err := testutils.ExecuteCobraCommand(t, cli.StatusCmd())
 		writer.Close()
 		stdout := <-buffer
-		
+
 		if !errors.Is(err, expectedErr) {
 			t.Fatalf("got %#v, want %#v", err, expectedErr)
 		}

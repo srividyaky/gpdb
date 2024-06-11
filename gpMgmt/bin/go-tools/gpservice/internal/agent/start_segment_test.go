@@ -2,6 +2,7 @@ package agent_test
 
 import (
 	"context"
+	"github.com/greenplum-db/gpdb/gpservice/testutils/exectest"
 	"reflect"
 	"strings"
 	"testing"
@@ -9,7 +10,6 @@ import (
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/greenplum-db/gpdb/gpservice/idl"
 	"github.com/greenplum-db/gpdb/gpservice/internal/agent"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils/exectest"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 )
 

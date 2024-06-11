@@ -5,10 +5,9 @@ package exectest_test
 
 import (
 	"errors"
+	. "github.com/greenplum-db/gpdb/gpservice/testutils/exectest"
 	"os/exec"
 	"testing"
-
-	. "github.com/greenplum-db/gpdb/gpservice/internal/testutils/exectest"
 )
 
 func TestBuiltinMains(t *testing.T) {

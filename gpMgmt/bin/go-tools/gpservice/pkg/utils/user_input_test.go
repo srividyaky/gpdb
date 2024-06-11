@@ -2,10 +2,10 @@ package utils_test
 
 import (
 	"fmt"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
 	"strings"
 	"testing"
 
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 )
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/greenplum-db/gpdb/gpservice/pkg/gpservice_config"
 	"os"
 	"reflect"
 	"strings"
@@ -19,10 +20,14 @@ import (
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/greenplum-db/gpdb/gpservice/idl"
 	"github.com/greenplum-db/gpdb/gpservice/idl/mock_idl"
-	"github.com/greenplum-db/gpdb/gpservice/internal/hub"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils/exectest"
+	//"github.com/greenplum-db/gpdb/gpservice/internal/hub"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
+	"github.com/greenplum-db/gpdb/gpservice/testutils/exectest"
+)
+
+var (
+	ctrl *gomock.Controller
 )
 
 func init() {
@@ -34,6 +39,42 @@ func init() {
 
 func TestMain(m *testing.M) {
 	os.Exit(exectest.Run(m))
+}
+
+func setupTest(t *testing.T) {
+	testhelper.SetupTestLogger()
+	cli.Conf = InitializeTestEnv()
+	ctrl = gomock.NewController(t)
+}
+func InitializeTestEnv() *gpservice_config.Config {
+	host, _ := os.Hostname()
+	gpHome := os.Getenv("GPHOME")
+	credCmd := &testutils.MockCredentials{}
+	conf := &gpservice_config.Config{
+		HubPort:     constants.DefaultHubPort,
+		AgentPort:   constants.DefaultAgentPort,
+		Hostnames:   []string{host},
+		LogDir:      "/tmp/logDir",
+		GpHome:      gpHome,
+		Credentials: credCmd}
+	return conf
+}
+func teardownTest() {
+	defer ctrl.Finish()
+}
+
+func resetCLIVars() {
+	cli.InitClusterService = cli.InitClusterServiceFn
+	cli.LoadInputConfigToIdl = cli.LoadInputConfigToIdlFn
+	cli.ValidateInputConfigAndSetDefaults = cli.ValidateInputConfigAndSetDefaultsFn
+	cli.ParseStreamResponse = cli.ParseStreamResponseFn
+	cli.IsGpServicesEnabled = cli.IsGpServicesEnabledFn
+	cli.CheckForDuplicatPortAndDataDirectory = cli.CheckForDuplicatePortAndDataDirectoryFn
+	cli.CheckForDuplicatPortAndDataDirectory = cli.CheckForDuplicatePortAndDataDirectoryFn
+	cli.GetSystemLocale = cli.GetSystemLocaleFn
+
+	gpservice_config.ResetConnectToHub()
+
 }
 
 func TestValidateStringArray(t *testing.T) {
@@ -1309,6 +1350,7 @@ func TestRunInitClusterCmd(t *testing.T) {
 		}
 	})
 }
+
 func TestInitClusterService(t *testing.T) {
 	setupTest(t)
 	defer teardownTest()
@@ -1335,7 +1377,7 @@ func TestInitClusterService(t *testing.T) {
 		cli.LoadInputConfigToIdl = func(ctx context.Context, inputConfigFile string, cliHandler *viper.Viper, force bool, verbose bool) (*idl.MakeClusterRequest, error) {
 			return nil, fmt.Errorf(testStr)
 		}
-		cli.ConnectToHub = func(conf *hub.Config) (idl.HubClient, error) {
+		gpservice_config.ConnectToHub = func(conf *gpservice_config.Config) (idl.HubClient, error) {
 			return mock_idl.NewMockHubClient(ctrl), nil
 		}
 		err := cli.InitClusterService("/tmp/invalid_file", context.Background(), nil, false, false)
@@ -1360,7 +1402,7 @@ func TestInitClusterService(t *testing.T) {
 		cli.ValidateInputConfigAndSetDefaults = func(request *idl.MakeClusterRequest, cliHandler *viper.Viper) error {
 			return fmt.Errorf(testStr)
 		}
-		cli.ConnectToHub = func(conf *hub.Config) (idl.HubClient, error) {
+		gpservice_config.ConnectToHub = func(conf *gpservice_config.Config) (idl.HubClient, error) {
 			return mock_idl.NewMockHubClient(ctrl), nil
 		}
 		err := cli.InitClusterService("/tmp/invalid_file", context.Background(), nil, false, false)
@@ -1385,7 +1427,7 @@ func TestInitClusterService(t *testing.T) {
 		cli.ValidateInputConfigAndSetDefaults = func(request *idl.MakeClusterRequest, cliHandler *viper.Viper) error {
 			return fmt.Errorf(testStr)
 		}
-		cli.ConnectToHub = func(conf *hub.Config) (idl.HubClient, error) {
+		gpservice_config.ConnectToHub = func(conf *gpservice_config.Config) (idl.HubClient, error) {
 			return mock_idl.NewMockHubClient(ctrl), nil
 		}
 		err := cli.InitClusterService("/tmp/invalid_file", context.Background(), nil, false, false)
@@ -1410,7 +1452,8 @@ func TestInitClusterService(t *testing.T) {
 		cli.ValidateInputConfigAndSetDefaults = func(request *idl.MakeClusterRequest, cliHandler *viper.Viper) error {
 			return nil
 		}
-		cli.ConnectToHub = func(conf *hub.Config) (idl.HubClient, error) {
+
+		gpservice_config.ConnectToHub = func(conf *gpservice_config.Config) (idl.HubClient, error) {
 			return nil, fmt.Errorf(testStr)
 		}
 
@@ -1436,7 +1479,7 @@ func TestInitClusterService(t *testing.T) {
 		cli.ValidateInputConfigAndSetDefaults = func(request *idl.MakeClusterRequest, cliHandler *viper.Viper) error {
 			return nil
 		}
-		cli.ConnectToHub = func(conf *hub.Config) (idl.HubClient, error) {
+		gpservice_config.ConnectToHub = func(conf *gpservice_config.Config) (idl.HubClient, error) {
 			hubClient := mock_idl.NewMockHubClient(ctrl)
 			hubClient.EXPECT().MakeCluster(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf(testStr))
 			return hubClient, nil
@@ -1465,7 +1508,8 @@ func TestInitClusterService(t *testing.T) {
 		cli.ValidateInputConfigAndSetDefaults = func(request *idl.MakeClusterRequest, cliHandler *viper.Viper) error {
 			return nil
 		}
-		cli.ConnectToHub = func(conf *hub.Config) (idl.HubClient, error) {
+
+		gpservice_config.ConnectToHub = func(conf *gpservice_config.Config) (idl.HubClient, error) {
 			hubClient := mock_idl.NewMockHubClient(ctrl)
 			hubClient.EXPECT().MakeCluster(gomock.Any(), gomock.Any()).Return(nil, nil)
 			return hubClient, nil
@@ -2006,7 +2050,7 @@ func TestInitClean(t *testing.T) {
 		defer resetCLIVars()
 
 		expectedErr := errors.New("test error")
-		cli.ConnectToHub = func(conf *hub.Config) (idl.HubClient, error) {
+		gpservice_config.ConnectToHub = func(conf *gpservice_config.Config) (idl.HubClient, error) {
 			return nil, expectedErr
 		}
 
@@ -2023,7 +2067,7 @@ func TestInitClean(t *testing.T) {
 
 		_, _, logfile := testhelper.SetupTestLogger()
 
-		cli.ConnectToHub = func(conf *hub.Config) (idl.HubClient, error) {
+		gpservice_config.ConnectToHub = func(conf *gpservice_config.Config) (idl.HubClient, error) {
 			hubClient := mock_idl.NewMockHubClient(ctrl)
 			hubClient.EXPECT().CleanInitCluster(gomock.Any(), gomock.Any())
 			return hubClient, nil
@@ -2042,7 +2086,7 @@ func TestInitClean(t *testing.T) {
 		defer teardownTest()
 
 		expectedErr := errors.New("error")
-		cli.ConnectToHub = func(conf *hub.Config) (idl.HubClient, error) {
+		gpservice_config.ConnectToHub = func(conf *gpservice_config.Config) (idl.HubClient, error) {
 			hubClient := mock_idl.NewMockHubClient(ctrl)
 			hubClient.EXPECT().CleanInitCluster(gomock.Any(), gomock.Any()).Return(nil, expectedErr)
 			return hubClient, nil

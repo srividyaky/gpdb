@@ -3,6 +3,7 @@ package hub
 import (
 	"context"
 	"fmt"
+	"google.golang.org/grpc/credentials"
 	"net"
 	"strconv"
 	"sync"
@@ -18,19 +19,13 @@ type RpcReply struct {
 	hostname, address string
 }
 
-// ConnectHostList connects to given hostlist on the agent port, returns map of agent-address and connection
-// if fails, returns error.
-func (s *Server) ConnectHostList(hostList []string) (map[string]idl.AgentClient, error) {
+var GetConnectionOnHostList = GetConnectionOnHostListFn
+
+func GetConnectionOnHostListFn(credentials credentials.TransportCredentials, agentPort int, hostList []string) (map[string]idl.AgentClient, error) {
 	addressConnectionMap := make(map[string]idl.AgentClient)
-
-	credentials, err := s.Credentials.LoadClientCredentials()
-	if err != nil {
-		return nil, err
-	}
-
 	for _, address := range hostList {
 		if _, ok := addressConnectionMap[address]; !ok {
-			addressUrl := net.JoinHostPort(address, strconv.Itoa(s.AgentPort))
+			addressUrl := net.JoinHostPort(address, strconv.Itoa(agentPort))
 			conn, err := grpc.NewClient(addressUrl, grpc.WithTransportCredentials(credentials))
 			if err != nil {
 				return nil, fmt.Errorf("could not connect to agent on host %s: %w", addressUrl, err)
@@ -41,6 +36,17 @@ func (s *Server) ConnectHostList(hostList []string) (map[string]idl.AgentClient,
 	}
 
 	return addressConnectionMap, nil
+}
+
+// ConnectHostList connects to given hostlist on the agent port, returns map of agent-address and connection
+// if fails, returns error.
+func (s *Server) ConnectHostList(hostList []string) (map[string]idl.AgentClient, error) {
+	credentials, err := s.Credentials.LoadClientCredentials()
+	if err != nil {
+		return nil, err
+	}
+
+	return GetConnectionOnHostList(credentials, s.AgentPort, hostList)
 }
 func (s *Server) GetAllHostNames(ctx context.Context, request *idl.GetAllHostNamesRequest) (*idl.GetAllHostNamesReply, error) {
 	gplog.Debug("Starting with rpc GetAllHostNames")

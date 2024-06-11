@@ -3,6 +3,8 @@ package hub_test
 import (
 	"context"
 	"errors"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
+	"github.com/greenplum-db/gpdb/gpservice/testutils/exectest"
 	"os"
 	"reflect"
 	"sort"
@@ -20,8 +22,6 @@ import (
 	"github.com/greenplum-db/gpdb/gpservice/idl"
 	"github.com/greenplum-db/gpdb/gpservice/idl/mock_idl"
 	"github.com/greenplum-db/gpdb/gpservice/internal/hub"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils/exectest"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 )
 
@@ -122,7 +122,7 @@ func TestDialAllAgents(t *testing.T) {
 			t.Fatalf("got %+v, want %+v", connectedHosts, expectedHosts)
 		}
 	})
-	
+
 	t.Run("errors out when connection to agent hosts fail", func(t *testing.T) {
 		hubServer := hub.New(hubConfig)
 		err := hubServer.DialAllAgents(grpc.WithCredentialsBundle(insecure.NewBundle()))
@@ -180,6 +180,9 @@ func TestStatusAgents(t *testing.T) {
 				{Role: "Agent", Host: "sdw1", Status: "running", Uptime: "5H", Pid: 123},
 			},
 		}
+		sort.Slice(result.Statuses, func(i, j int) bool {
+			return result.Statuses[i].Pid > result.Statuses[j].Pid
+		})
 		if !reflect.DeepEqual(result, expected) {
 			t.Fatalf("got %+v, want %+v", result, expected)
 		}

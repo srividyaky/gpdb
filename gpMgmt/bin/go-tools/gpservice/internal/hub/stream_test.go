@@ -3,6 +3,8 @@ package hub_test
 import (
 	"errors"
 	"fmt"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
+	"github.com/greenplum-db/gpdb/gpservice/testutils/exectest"
 	"os"
 	"os/exec"
 	"reflect"
@@ -12,8 +14,6 @@ import (
 
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/greenplum-db/gpdb/gpservice/idl"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils/exectest"
 )
 
 func init() {

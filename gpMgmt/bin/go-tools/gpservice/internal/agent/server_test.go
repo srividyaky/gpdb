@@ -3,6 +3,7 @@ package agent_test
 import (
 	"errors"
 	"fmt"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
 	"net"
 	"reflect"
 	"strings"
@@ -12,8 +13,7 @@ import (
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/greenplum-db/gpdb/gpservice/constants"
 	"github.com/greenplum-db/gpdb/gpservice/idl"
-	agent "github.com/greenplum-db/gpdb/gpservice/internal/agent"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
+	"github.com/greenplum-db/gpdb/gpservice/internal/agent"
 )
 
 func TestStartServer(t *testing.T) {

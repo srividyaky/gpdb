@@ -3,6 +3,7 @@ package agent_test
 import (
 	"context"
 	"fmt"
+	"github.com/greenplum-db/gpdb/gpservice/testutils/exectest"
 	"net"
 	"os"
 	"os/user"
@@ -14,7 +15,6 @@ import (
 	"github.com/greenplum-db/gpdb/gpservice/constants"
 	"github.com/greenplum-db/gpdb/gpservice/idl"
 	"github.com/greenplum-db/gpdb/gpservice/internal/agent"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils/exectest"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 )
 

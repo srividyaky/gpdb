@@ -80,7 +80,7 @@ func RunConfigure(cmd *cobra.Command, args []string) (err error) {
 
 	// Regenerate default flag values if a custom GPHOME or username is passed
 	if !cmd.Flags().Lookup("config-file").Changed {
-		configFilepath = filepath.Join(gpHome, constants.ConfigFileName)
+		ConfigFilepath = filepath.Join(gpHome, constants.ConfigFileName)
 	}
 
 	if !cmd.Flags().Lookup("host").Changed && !cmd.Flags().Lookup("hostfile").Changed {
@@ -113,7 +113,7 @@ func RunConfigure(cmd *cobra.Command, args []string) (err error) {
 		ServerCertPath: serverCertPath,
 		ServerKeyPath:  serverKeyPath,
 	}
-	err = config.Create(configFilepath, hubPort, agentPort, hostnames, hubLogDir, serviceName, gpHome, credentials)
+	err = config.Create(ConfigFilepath, hubPort, agentPort, hostnames, hubLogDir, serviceName, gpHome, credentials)
 	if err != nil {
 		return err
 	}

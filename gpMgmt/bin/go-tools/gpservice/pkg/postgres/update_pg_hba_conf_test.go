@@ -2,12 +2,12 @@ package postgres_test
 
 import (
 	"errors"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
 	"os"
 	"os/user"
 	"testing"
 
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/postgres"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 )

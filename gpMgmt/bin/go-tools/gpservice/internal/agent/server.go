@@ -69,7 +69,7 @@ func (s *Server) Start() error {
 		grpc.Creds(credentials),
 		grpc.UnaryInterceptor(interceptor),
 	)
-	
+
 	healthcheck := health.NewServer()
 	healthgrpc.RegisterHealthServer(grpcServer, healthcheck)
 

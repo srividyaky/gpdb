@@ -2,6 +2,9 @@ package cli_test
 
 import (
 	"errors"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
+	"github.com/greenplum-db/gpdb/gpservice/testutils/exectest"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -12,8 +15,6 @@ import (
 	"github.com/greenplum-db/gpdb/gpservice/idl"
 	"github.com/greenplum-db/gpdb/gpservice/idl/mock_idl"
 	"github.com/greenplum-db/gpdb/gpservice/internal/cli"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils/exectest"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/gpservice_config"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 )
@@ -150,12 +151,21 @@ func TestStartCmd(t *testing.T) {
 			t.Fatalf("got %v, want %s", err, expectedErrPrefix)
 		}
 	})
-	
+
 	t.Run("shows the status when run in verbose mode", func(t *testing.T) {
 		testhelper.SetupTestLogger()
+		config := testutils.CreateDummyServiceConfig(t)
 
-		resetConf := cli.SetConf(testutils.CreateDummyServiceConfig(t))
+		resetConf := cli.SetConf(config)
 		defer resetConf()
+		tempConfFile, err := os.CreateTemp("/tmp", "")
+
+		if err != nil {
+			t.Fatalf("error creating temp file: %v", err)
+		}
+		defer os.Remove(tempConfFile.Name())
+		cli.ConfigFilepath = tempConfFile.Name()
+		config.Write(tempConfFile.Name())
 
 		utils.System.ExecCommand = exectest.NewCommand(exectest.Success)
 		utils.System.GetHostName = func() (name string, err error) {
@@ -186,7 +196,7 @@ func TestStartCmd(t *testing.T) {
 		buffer, writer, resetStdout := testutils.CaptureStdout(t)
 		defer resetStdout()
 
-		_, err := testutils.ExecuteCobraCommand(t, cli.RootCommand(), "start", "--verbose")
+		_, err = testutils.ExecuteCobraCommand(t, cli.RootCommand(), "start", "--verbose", "--config-file", tempConfFile.Name())
 		writer.Close()
 		stdout := <-buffer
 

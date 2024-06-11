@@ -3,13 +3,13 @@ package utils_test
 import (
 	"context"
 	"errors"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
 	"strings"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
 
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 )
 

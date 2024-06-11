@@ -2,6 +2,7 @@ package cli_test
 
 import (
 	"errors"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
 	"strings"
 	"testing"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/greenplum-db/gpdb/gpservice/idl"
 	"github.com/greenplum-db/gpdb/gpservice/idl/mock_idl"
 	"github.com/greenplum-db/gpdb/gpservice/internal/cli"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/gpservice_config"
 )
 
@@ -21,10 +21,10 @@ func TestStopCmd(t *testing.T) {
 
 		resetConf := cli.SetConf(testutils.CreateDummyServiceConfig(t))
 		defer resetConf()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		
+
 		client := mock_idl.NewMockHubClient(ctrl)
 		client.EXPECT().Stop(
 			gomock.Any(),
@@ -103,10 +103,10 @@ func TestStopCmd(t *testing.T) {
 
 		resetConf := cli.SetConf(testutils.CreateDummyServiceConfig(t))
 		defer resetConf()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		
+
 		expectedErr := errors.New("error")
 		client := mock_idl.NewMockHubClient(ctrl)
 		client.EXPECT().StopAgents(
@@ -136,10 +136,10 @@ func TestStopCmd(t *testing.T) {
 
 		resetConf := cli.SetConf(testutils.CreateDummyServiceConfig(t))
 		defer resetConf()
-		
+
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
-		
+
 		expectedErr := errors.New("error")
 		client := mock_idl.NewMockHubClient(ctrl)
 		client.EXPECT().StopAgents(

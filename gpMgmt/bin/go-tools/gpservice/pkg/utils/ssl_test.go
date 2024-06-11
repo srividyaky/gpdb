@@ -10,7 +10,7 @@ import (
 )
 
 func TestLoadServerCredentials(t *testing.T) {
-	out, err := exec.Command(constants.ShellPath, "-c", "../../generate_test_tls_certificates.sh `hostname`").CombinedOutput()
+	out, err := exec.Command(constants.ShellPath, "-c", "../../../generate_test_tls_certificates.sh `hostname`").CombinedOutput()
 	if err != nil {
 		t.Fatalf("Cannot generate test certificates: %v, stdErr:%s", err, string(out))
 	}
@@ -50,7 +50,7 @@ func TestLoadServerCredentials(t *testing.T) {
 }
 
 func TestLoadClientCredentials(t *testing.T) {
-	out, err := exec.Command(constants.ShellPath, "-c", "../../generate_test_tls_certificates.sh `hostname`").CombinedOutput()
+	out, err := exec.Command(constants.ShellPath, "-c", "../../../generate_test_tls_certificates.sh `hostname`").CombinedOutput()
 	if err != nil {
 		t.Fatalf("Cannot generate test certificates: %v, stderror:%v", err, string(out))
 	}

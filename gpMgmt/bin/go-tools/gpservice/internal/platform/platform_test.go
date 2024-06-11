@@ -3,6 +3,7 @@ package platform_test
 import (
 	"errors"
 	"fmt"
+	"github.com/greenplum-db/gpdb/gpservice/testutils/exectest"
 	"os"
 	"os/exec"
 	"reflect"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
 	"github.com/greenplum-db/gpdb/gpservice/idl"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils/exectest"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 )
 
@@ -559,7 +559,7 @@ func TestGetServiceStatusMessage(t *testing.T) {
 		if output != "" {
 			t.Fatalf("expected empty output, got %q", output)
 		}
-		
+
 		var expectedErr *exec.ExitError
 		if !errors.As(err, &expectedErr) {
 			t.Errorf("got %T, want %T", err, expectedErr)

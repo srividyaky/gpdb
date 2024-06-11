@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/greenplum-db/gpdb/gpservice/constants"
 	"io"
 	"net"
 	"os"
@@ -52,8 +53,8 @@ func CreateDummyServiceConfig(t *testing.T) *config.Config {
 		AgentPort:   5678,
 		Hostnames:   []string{"sdw1", "sdw2"},
 		LogDir:      "/tmp/logDir",
-		ServiceName: "gp",
-		GpHome:      "gpHome",
+		ServiceName: constants.DefaultServiceName,
+		GpHome:      "/gphome",
 		Credentials: &MockCredentials{TlsConnection: insecure.NewCredentials()},
 	}
 }

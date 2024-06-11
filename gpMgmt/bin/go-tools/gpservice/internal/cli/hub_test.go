@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
 	"net"
 	"strings"
 	"testing"
 
 	"github.com/greenplum-db/gpdb/gpservice/internal/cli"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
 )
 
 func TestHubCmd(t *testing.T) {

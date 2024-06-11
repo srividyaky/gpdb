@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
+	"github.com/greenplum-db/gpdb/gpservice/testutils/exectest"
 	"maps"
 	"os/exec"
 	"os/user"
@@ -18,8 +20,6 @@ import (
 	"github.com/greenplum-db/gpdb/gpservice/idl"
 	"github.com/greenplum-db/gpdb/gpservice/idl/mock_idl"
 	"github.com/greenplum-db/gpdb/gpservice/internal/hub"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils/exectest"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/greenplum"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 )
@@ -304,7 +304,7 @@ func TestStopCoordinator(t *testing.T) {
 		utils.System.ExecCommand = exectest.NewCommandWithVerifier(exectest.Success, func(utility string, args ...string) {
 			pgCtlCalled = true
 
-			expectedUtility := "gpHome/bin/pg_ctl"
+			expectedUtility := "/gphome/bin/pg_ctl"
 			if utility != expectedUtility {
 				t.Fatalf("got %s, want %s", utility, expectedUtility)
 			}
@@ -493,7 +493,7 @@ func TestValidateEnvironment(t *testing.T) {
 		utils.System.ExecCommand = exectest.NewCommandWithVerifier(exectest.Success, func(utility string, args ...string) {
 			postgresCalled = true
 
-			expectedUtility := "gpHome/bin/postgres"
+			expectedUtility := "/gphome/bin/postgres"
 			if utility != expectedUtility {
 				t.Fatalf("got %v, want %v", utility, expectedUtility)
 			}

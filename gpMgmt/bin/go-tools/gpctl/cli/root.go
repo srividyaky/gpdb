@@ -14,20 +14,20 @@ import (
 var (
 	configFilepath string
 	verbose        bool
-	conf           *gpservice_config.Config
+	Conf           *gpservice_config.Config
 )
 
 func RootCommand() *cobra.Command {
 	root := &cobra.Command{
-		Use: "gpctl",
+		Use:  "gpctl",
 		Long: "gpctl is a utility to manage a Greenplum Database System",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
-			conf, err = gpservice_config.Read(configFilepath)
+			Conf, err = gpservice_config.Read(configFilepath)
 			if err != nil {
 				return err
 			}
 
-			initializeLogger(cmd, conf.LogDir)
+			initializeLogger(cmd, Conf.LogDir)
 			return
 		}}
 

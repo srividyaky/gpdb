@@ -3,6 +3,8 @@ package utils_test
 import (
 	"context"
 	"errors"
+	"github.com/greenplum-db/gpdb/gpservice/testutils"
+	"github.com/greenplum-db/gpdb/gpservice/testutils/exectest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,8 +14,6 @@ import (
 	"time"
 
 	"github.com/greenplum-db/gp-common-go-libs/testhelper"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils"
-	"github.com/greenplum-db/gpdb/gpservice/internal/testutils/exectest"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/postgres"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 )

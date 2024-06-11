@@ -153,7 +153,7 @@ func InitClean(prompt bool) error {
 		}
 	}
 
-	client, err := gpservice_config.ConnectToHub(conf)
+	client, err := gpservice_config.ConnectToHub(Conf)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func InitClusterServiceFn(inputConfigFile string, ctx context.Context, ctrl *Str
 			}
 
 			// Call the cleanup routine only if the cleanup file exists
-			fileName := filepath.Join(conf.LogDir, constants.CleanFileName)
+			fileName := filepath.Join(Conf.LogDir, constants.CleanFileName)
 			_, statErr := utils.System.Stat(fileName)
 
 			// do not display the prompt in case of SIGTERM
@@ -199,7 +199,7 @@ func InitClusterServiceFn(inputConfigFile string, ctx context.Context, ctrl *Str
 	// Viper instance to read the input config
 	cliHandler := viper.New()
 
-	HubClient, err = gpservice_config.ConnectToHub(conf)
+	HubClient, err = gpservice_config.ConnectToHub(Conf)
 	if err != nil {
 		return err
 	}
@@ -903,7 +903,7 @@ func IsGpServicesEnabledFn(req *idl.MakeClusterRequest) error {
 	slices.Sort(hostnames)
 	hostnames = slices.Compact(hostnames)
 
-	diff := utils.GetListDifference(hostnames, conf.Hostnames)
+	diff := utils.GetListDifference(hostnames, Conf.Hostnames)
 	if len(diff) != 0 {
 		return fmt.Errorf("following hostnames %s do not have gp services configured. Please configure the services", diff)
 	}

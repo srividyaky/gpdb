@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	configFilepath string
+	ConfigFilepath string
 	conf           *config.Config
 	verbose        bool
 )
@@ -27,7 +27,7 @@ func RootCommand() *cobra.Command {
 				return
 			}
 
-			conf, err = config.Read(configFilepath)
+			conf, err = config.Read(ConfigFilepath)
 			if err != nil {
 				return err
 			}
@@ -36,7 +36,7 @@ func RootCommand() *cobra.Command {
 			return
 		}}
 
-	root.PersistentFlags().StringVar(&configFilepath, "config-file", filepath.Join(os.Getenv("GPHOME"), constants.ConfigFileName), `Path to gpservice configuration file`)
+	root.PersistentFlags().StringVar(&ConfigFilepath, "config-file", filepath.Join(os.Getenv("GPHOME"), constants.ConfigFileName), `Path to gpservice configuration file`)
 	root.PersistentFlags().BoolVar(&verbose, "verbose", false, `Provide verbose output`)
 
 	root.CompletionOptions.DisableDefaultCmd = true

@@ -20,22 +20,22 @@ func StatusCmd() *cobra.Command {
 		Short: "Display status of hub and agent services",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var statuses []*idl.ServiceStatus
-			
+
 			hubStatus, err := getHubStatus(conf)
 			if err != nil {
 				return err
 			}
 			statuses = append(statuses, hubStatus...)
-			
+
 			agentStatus, err := getAgentStatus(conf)
 			if err != nil {
 				displayServiceStatus(os.Stdout, statuses)
 				return err
 			}
 			statuses = append(statuses, agentStatus...)
-			
+
 			displayServiceStatus(os.Stdout, statuses)
-			
+
 			return nil
 		},
 	}
