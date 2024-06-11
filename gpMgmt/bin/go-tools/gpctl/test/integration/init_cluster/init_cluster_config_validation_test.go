@@ -932,18 +932,6 @@ func TestInputFileValidation(t *testing.T) {
 			t.Fatalf("failed to write config to file: %v", err)
 		}
 
-		configSettings := config.AllSettings()
-
-		// Marshal the settings into JSON format
-		jsonConfig, err := json.MarshalIndent(configSettings, "", "  ")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Print the JSON configuration
-		fmt.Println("Updated configuration:")
-		fmt.Println(string(jsonConfig))
-
 		result, err := testutils.RunInitCluster(configFile)
 		if err != nil {
 			t.Fatalf("Error while intializing cluster: %#v", err)

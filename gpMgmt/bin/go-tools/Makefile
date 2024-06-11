@@ -21,12 +21,44 @@ unit:
 # You can override this from the command line to run tests for specific utility.
 # For example, to run start related tests: make integration UTILITY=start
 # NOTE: If hostfile is not provided, by default it will run tests on localhost.
-UTILITY = ''
-integration: TEST_PACKAGES := $(shell go list ./test/integration/... | grep -E $(UTILITY))
-integration:
-	go test -v -count=1 $(TEST_PACKAGES) -timeout 0 -p 1 -args -hostfile=$(FILE)
 
-test: unit integration
+# TEST_PACKAGES := ./...
+# integration: TEST_PACKAGES := $(shell go list ./... | grep -v ./test/integration)
+UTILITY = ''
+integration:
+		$(MAKE) -C gpservice/ integration UTILITY=$(UTILITY) FILE=$(FILE); $(MAKE) -C gpctl/ integration UTILITY=$(UTILITY) FILE=$(FILE);
+	
+
+
+
+
+# UTILITY = ''
+# integration: TEST_PACKAGES := $(shell go list ./test/integration/... | grep -E $(UTILITY))
+# integration:
+# 	go test -v -count=1 $(TEST_PACKAGES) -timeout 0 -p 1 -args -hostfile=$(FILE)
+
+# test: unit integration
+
+# UTILITY = ''
+# GPCTL_INTEGRATION_DIR := ./gpctl/test/integration/
+# GPSERVICE_INTEGRATION_DIR := ./gpservice/test/integration/
+
+# # Define the default target
+# test: unit integration
+
+# # Define the unit test target
+# unit:
+# 	$(MAKE) -C gpservice/ unit
+# 	$(MAKE) -C gpctl/ unit
+
+# # Define the integration test target
+# integration: TEST_PACKAGES := $(shell go list $(GPCTL_INTEGRATION_DIR)... | grep -E $(UTILITY))
+# #integration: TEST_PACKAGES := $(GPCTL_INTEGRATION_DIR) $(GPSERVICE_INTEGRATION_DIR)
+# integration:
+# 	go test -v -count=1 $(TEST_PACKAGES) -timeout 0 -p 1 -args -hostfile=$(FILE)
+
+
+
 
 .PHONY: test-coverage
 PACKAGE_DIRS := $(shell go list ./... | grep -vE "gp$$|constants$$|testutils|idl$$|integration")

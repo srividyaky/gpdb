@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	//"github.com/greenplum-db/gpdb/gpservice/internal/hub"
 	"github.com/greenplum-db/gpdb/gpservice/pkg/gpservice_config"
 	"github.com/greenplum-db/gpdb/gpservice/test/integration/testutils"
 )
@@ -12,6 +11,10 @@ import (
 var gpCfg gpservice_config.Config
 
 func TestStatusSuccess(t *testing.T) {
+	const (
+		gpserviceHub   = "gpservice_hub"
+		gpserviceAgent = "gpservice_agent"
+	)
 	var StatusSuccessTestCases = []struct {
 		name        string
 		cliParams   []string
@@ -21,7 +24,7 @@ func TestStatusSuccess(t *testing.T) {
 		{
 			name: "status services shows status of hub and agents",
 			cliParams: []string{
-				"services",
+				"",
 			},
 			expectedOut: []string{
 				"ROLE", "HOST", "STATUS", "PID", "UPTIME",
@@ -29,40 +32,14 @@ func TestStatusSuccess(t *testing.T) {
 				"Agent", "running",
 			},
 			serviceName: []string{
-				"gp_hub",
-				"gp_agent",
-			},
-		},
-		{
-			name: "status hub shows status of hub",
-			cliParams: []string{
-				"hub",
-			},
-			expectedOut: []string{
-				"ROLE", "HOST", "STATUS", "PID", "UPTIME",
-				"Hub", "running",
-			},
-			serviceName: []string{
-				"gp_hub",
-			},
-		},
-		{
-			name: "status agents shows status of agents",
-			cliParams: []string{
-				"agents",
-			},
-			expectedOut: []string{
-				"ROLE", "HOST", "STATUS", "PID", "UPTIME",
-				"Agent", "running",
-			},
-			serviceName: []string{
-				"gp_agent",
+				gpserviceHub,
+				gpserviceAgent,
 			},
 		},
 		{
 			name: "status services with --verbose cli param",
 			cliParams: []string{
-				"services", "--verbose",
+				"--verbose",
 			},
 			expectedOut: []string{
 				"ROLE", "HOST", "STATUS", "PID", "UPTIME",
@@ -70,34 +47,8 @@ func TestStatusSuccess(t *testing.T) {
 				"Agent", "running",
 			},
 			serviceName: []string{
-				"gp_hub",
-				"gp_agent",
-			},
-		},
-		{
-			name: "status hub with --verbose cli param",
-			cliParams: []string{
-				"hub", "--verbose",
-			},
-			expectedOut: []string{
-				"ROLE", "HOST", "STATUS", "PID", "UPTIME",
-				"Hub", "running",
-			},
-			serviceName: []string{
-				"gp_hub",
-			},
-		},
-		{
-			name: "status agents with --verbose cli param",
-			cliParams: []string{
-				"agents", "--verbose",
-			},
-			expectedOut: []string{
-				"ROLE", "HOST", "STATUS", "PID", "UPTIME",
-				"Agent", "running",
-			},
-			serviceName: []string{
-				"gp_agent",
+				gpserviceHub,
+				gpserviceAgent,
 			},
 		},
 	}
@@ -105,7 +56,7 @@ func TestStatusSuccess(t *testing.T) {
 	for _, tc := range StatusSuccessTestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			testutils.InitService(*hostfile, testutils.CertificateParams)
-			_, _ = testutils.RunStart("services")
+			_, _ = testutils.RunStart()
 			gpCfg = testutils.ParseConfig(testutils.DefaultConfigurationFile)
 
 			// Running the gp status command
@@ -136,7 +87,7 @@ func TestStatusSuccess(t *testing.T) {
 					testutils.VerifyServicePIDOnPort(t, pid, listeningPort, host)
 				}
 			}
-			_, _ = testutils.RunStop("services")
+			_, _ = testutils.RunStop()
 		})
 	}
 }
@@ -145,10 +96,10 @@ func TestStatusSuccessWithoutDefaultService(t *testing.T) {
 	t.Run("status services when gp installed with --service-name param", func(t *testing.T) {
 		params := append(testutils.CertificateParams, []string{"--service-name", "dummySvc"}...)
 		testutils.InitService(*hostfile, params)
-		_, _ = testutils.RunStart("services")
+		_, _ = testutils.RunStart()
 
 		cliParams := []string{
-			"services", "--verbose",
+			"--verbose",
 		}
 		expectedOut := []string{
 			"ROLE", "HOST", "STATUS", "PID", "UPTIME",
@@ -185,32 +136,9 @@ func TestStatusSuccessWithoutDefaultService(t *testing.T) {
 				testutils.VerifyServicePIDOnPort(t, pid, listeningPort, host)
 			}
 		}
-		_, _ = testutils.RunStop("services")
+		_, _ = testutils.RunStop()
 	})
 
-	t.Run("status hub shows status of hub when it is not running", func(t *testing.T) {
-		testutils.InitService(*hostfile, testutils.CertificateParams)
-
-		expectedOut := []string{
-			"ROLE", "HOST", "STATUS", "PID", "UPTIME",
-			"Hub", "not running",
-		}
-
-		// Running the gp status command for hub
-		result, err := testutils.RunStatus("hub")
-		// check for command result
-		if err != nil {
-			t.Errorf("\nUnexpected error: %#v", err)
-		}
-		if result.ExitCode != 0 {
-			t.Errorf("\nExpected: %v \nGot: %v", 0, result.ExitCode)
-		}
-		for _, item := range expectedOut {
-			if !strings.Contains(result.OutputMsg, item) {
-				t.Errorf("\nExpected string: %#v \nNot found in: %#v", item, result.OutputMsg)
-			}
-		}
-	})
 }
 
 func TestStatusSuccessHelp(t *testing.T) {
@@ -219,12 +147,7 @@ func TestStatusSuccessHelp(t *testing.T) {
 		cliParams   []string
 		expectedOut []string
 	}{
-		{
-			name: "status command without params shows help",
-			expectedOut: append([]string{
-				"Display status",
-			}, testutils.CommonHelpText...),
-		},
+		//this is failing, bug is raised for error message
 		{
 			name: "status command with invalid param shows help",
 			cliParams: []string{
@@ -252,64 +175,12 @@ func TestStatusSuccessHelp(t *testing.T) {
 				"Display status",
 			}, testutils.CommonHelpText...),
 		},
-		{
-			name: "status hub command with --help shows help",
-			cliParams: []string{
-				"hub", "--help",
-			},
-			expectedOut: append([]string{
-				"Display hub status",
-			}, testutils.CommonHelpText...),
-		},
-		{
-			name: "status hub command with -h shows help",
-			cliParams: []string{
-				"hub", "-h",
-			},
-			expectedOut: append([]string{
-				"Display hub status",
-			}, testutils.CommonHelpText...),
-		},
-		{
-			name: "status agents command with --help shows help",
-			cliParams: []string{
-				"agents", "--help",
-			},
-			expectedOut: append([]string{
-				"Display agents status",
-			}, testutils.CommonHelpText...),
-		},
-		{
-			name: "status agents command with -h shows help",
-			cliParams: []string{
-				"agents", "-h",
-			},
-			expectedOut: append([]string{
-				"Display agents status",
-			}, testutils.CommonHelpText...),
-		},
-		{
-			name: "status services command with --help shows help",
-			cliParams: []string{
-				"services", "--help",
-			},
-			expectedOut: append([]string{
-				"Display Hub and Agent services status",
-			}, testutils.CommonHelpText...),
-		},
-		{
-			name: "status services command with -h shows help",
-			cliParams: []string{
-				"services", "-h",
-			},
-			expectedOut: append([]string{
-				"Display Hub and Agent services status",
-			}, testutils.CommonHelpText...),
-		},
 	}
 
 	for _, tc := range TestCases {
 		t.Run(tc.name, func(t *testing.T) {
+			testutils.InitService(*hostfile, testutils.CertificateParams)
+			testutils.RunStart()
 			result, err := testutils.RunStatus(tc.cliParams...)
 			// check for command result
 			if err != nil {

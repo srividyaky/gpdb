@@ -11,13 +11,13 @@ import (
 func TestStatusFailures(t *testing.T) {
 	t.Run("checking service status without configuration file will fail", func(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
-		_, _ = testutils.RunStart("services")
+		_, _ = testutils.RunStart()
 		_ = testutils.CopyFile(testutils.DefaultConfigurationFile, "/tmp/config.conf")
 		_ = os.RemoveAll(testutils.DefaultConfigurationFile)
 
-		expectedOut := "could not open config file"
+		expectedOut := "could not open service config file"
 
-		result, err := testutils.RunStatus("services")
+		result, err := testutils.RunStatus()
 		if err == nil {
 			t.Errorf("\nExpected error Got: %#v", err)
 		}
@@ -28,23 +28,7 @@ func TestStatusFailures(t *testing.T) {
 			t.Errorf("\nExpected string: %#v \nNot found in: %#v", expectedOut, result.OutputMsg)
 		}
 
-		_, _ = testutils.RunStop("services", "--config-file", "/tmp/config.conf")
-	})
-
-	t.Run("checking status of agents will fail if hub is not running", func(t *testing.T) {
-		testutils.InitService(*hostfile, testutils.CertificateParams)
-
-		expectedOut := "could not connect to hub"
-		result, err := testutils.RunStatus("agents")
-		if err == nil {
-			t.Errorf("\nExpected error Got: %#v", err)
-		}
-		if result.ExitCode != testutils.ExitCode1 {
-			t.Errorf("\nExpected: %#v \nGot: %v", testutils.ExitCode1, result.ExitCode)
-		}
-		if !strings.Contains(result.OutputMsg, expectedOut) {
-			t.Errorf("\nExpected string: %#v \nNot found in: %#v", expectedOut, result.OutputMsg)
-		}
+		_, _ = testutils.RunStop("--config-file", "/tmp/config.conf")
 	})
 
 	t.Run("checking status of services after stopping hub will fail", func(t *testing.T) {
@@ -55,7 +39,7 @@ func TestStatusFailures(t *testing.T) {
 			"could not connect to hub",
 		}
 
-		result, err := testutils.RunStatus("services")
+		result, err := testutils.RunStatus()
 		if err == nil {
 			t.Errorf("\nExpected error Got: %#v", err)
 		}
@@ -69,37 +53,13 @@ func TestStatusFailures(t *testing.T) {
 		}
 	})
 
-	t.Run("checking status of agents without certificates", func(t *testing.T) {
-		testutils.InitService(*hostfile, testutils.CertificateParams)
-		_, _ = testutils.RunStart("services")
-		_ = testutils.CpCfgWithoutCertificates(configCopy)
-
-		cliParams := []string{
-			"agents", "--config-file", configCopy,
-		}
-		expectedOut := "error while loading server certificate"
-
-		result, err := testutils.RunStatus(cliParams...)
-		if err == nil {
-			t.Errorf("\nExpected error Got: %#v", err)
-		}
-		if result.ExitCode != testutils.ExitCode1 {
-			t.Errorf("\nExpected: %#v \nGot: %v", testutils.ExitCode1, result.ExitCode)
-		}
-		if !strings.Contains(result.OutputMsg, expectedOut) {
-			t.Errorf("\nExpected string: %#v \nNot found in: %#v", expectedOut, result.OutputMsg)
-		}
-
-		_, _ = testutils.RunStop("services")
-	})
-
 	t.Run("checking status of services without certificates", func(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
-		_, _ = testutils.RunStart("services")
+		_, _ = testutils.RunStart()
 		_ = testutils.CpCfgWithoutCertificates(configCopy)
 
 		cliParams := []string{
-			"services", "--config-file", configCopy,
+			"--config-file", configCopy,
 		}
 		expectedOut := "error while loading server certificate"
 
@@ -114,15 +74,15 @@ func TestStatusFailures(t *testing.T) {
 			t.Errorf("\nExpected string: %#v \nNot found in: %#v", expectedOut, result.OutputMsg)
 		}
 
-		_, _ = testutils.RunStop("services")
+		_, _ = testutils.RunStop()
 	})
 
 	t.Run("checking service status with no value for --config-file will fail", func(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
-		_, _ = testutils.RunStart("services")
+		_, _ = testutils.RunStart()
 
 		cliParams := []string{
-			"services", "--config-file",
+			"--config-file",
 		}
 		expectedOut := "flag needs an argument: --config-file"
 
@@ -137,15 +97,15 @@ func TestStatusFailures(t *testing.T) {
 			t.Errorf("\nExpected string: %#v \nNot found in: %#v", expectedOut, result.OutputMsg)
 		}
 
-		_, _ = testutils.RunStop("services")
+		_, _ = testutils.RunStop()
 	})
 
 	t.Run("checking service status with non-existing file for --config-file will fail", func(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
-		_, _ = testutils.RunStart("services")
+		_, _ = testutils.RunStart()
 
 		cliParams := []string{
-			"services", "--config-file", "file",
+			"--config-file", "file",
 		}
 		expectedOut := "no such file or directory"
 
@@ -160,15 +120,15 @@ func TestStatusFailures(t *testing.T) {
 			t.Errorf("\nExpected string: %#v \nNot found in: %#v", expectedOut, result.OutputMsg)
 		}
 
-		_, _ = testutils.RunStop("services")
+		_, _ = testutils.RunStop()
 	})
 
 	t.Run("checking service status with empty string for --config-file will fail", func(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
-		_, _ = testutils.RunStart("services")
+		_, _ = testutils.RunStart()
 
 		cliParams := []string{
-			"services", "--config-file", "",
+			"--config-file", "",
 		}
 		expectedOut := "no such file or directory"
 
@@ -183,6 +143,6 @@ func TestStatusFailures(t *testing.T) {
 			t.Errorf("\nExpected string: %#v \nNot found in: %#v", expectedOut, result.OutputMsg)
 		}
 
-		_, _ = testutils.RunStop("services")
+		_, _ = testutils.RunStop()
 	})
 }
