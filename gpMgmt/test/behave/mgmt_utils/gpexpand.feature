@@ -268,6 +268,7 @@ Feature: expand the cluster by adding more segments
         And the number of segments have been saved
         When the user runs gpexpand with the latest gpexpand_inputfile without ret code check
         Then gpexpand should return a return code of 3
+        And gpexpand should print "Simple test query failed. Please check if gp_interconnect_proxy_addresses is set properly" to stdout
         And gpexpand should print "The ic_proxy process failed to bind or listen" to stdout
 
     @gpexpand_icproxy

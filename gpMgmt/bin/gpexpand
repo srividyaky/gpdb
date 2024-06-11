@@ -2012,6 +2012,7 @@ class gpexpand:
         expansion. It will cause queries to hang forever.
         So, we have to check if the user have already set gp_interconnect_proxy_addresses before.
         And prompt user to set a proper value via gpconfig before expansion.
+        Also, run a test query to ensure that exercises the IC setup, as a smoke test.
         """
 
         # get GUC value
@@ -2029,8 +2030,6 @@ class gpexpand:
             raise Exception("failed to query in validate_icproxy_addr, database error: %s" % str(e))
         except Exception as e:
             raise Exception("failed to query in validate_icproxy_addr, exception: %s" % str(e))
-        finally:
-            conn.close()
 
         # check if newly added dbid exists in gp_interconnect_proxy_addresses
         need_prompt = False
@@ -2060,8 +2059,18 @@ class gpexpand:
                 else:
                     self.logger.warning("Recommended that run gpconfig to set gp_interconnect_proxy_addresses (replace the {port} with a proper value):")
                     self.logger.warning(" gpconfig -c gp_interconnect_proxy_addresses -v \"'%s'\" --skipvalidation" % (new_addresses_string))
-            else:
-                self.logger.info("Checking ICProxy addresses passed")
+
+        # check if a test query actually works, exercising the interconnect.
+        if ic_type == "proxy":
+            try:
+                dbconn.querySingleton(conn, "select count(*) from gp_dist_random('gp_id')")
+            except Exception as e:
+                self.logger.error("Simple test query failed. Please check if gp_interconnect_proxy_addresses is set properly")
+                raise Exception("simple query failed to exercise interconnect: %s" % str(e))
+
+        self.logger.info("Checking ICProxy addresses passed")
+
+        conn.close()
         return
 
 # -----------------------------------------------
@@ -2613,8 +2622,6 @@ def main(options, args, parser):
             _gp_expand.validate_heap_checksums()
             newSegList = _gp_expand.read_input_files()
             _gp_expand.addNewSegments(newSegList)
-            if not options.without_icproxy_check:
-                _gp_expand.validate_icproxy_addr(newSegList)
             newTableSpaceInfo = _gp_expand.read_tablespace_file()
             _gp_expand.sync_packages()
             _gp_expand.start_prepare()
@@ -2624,6 +2631,8 @@ def main(options, args, parser):
             _gp_expand.cleanup_new_segments()
             _gp_expand.update_catalog()
             _gp_expand.unlock_catalog()
+            if not options.without_icproxy_check:
+                _gp_expand.validate_icproxy_addr(newSegList)
             _gp_expand.setup_schema()
             _gp_expand.prepare_schema()
             _gp_expand.sync_new_mirrors()
