@@ -15,7 +15,8 @@ ssh -n cdw "
     export PATH=/usr/local/go/bin:\$PATH
     source /usr/local/greenplum-db-devel/greenplum_path.sh
 
-    chmod +x gp
+    chmod +x gpctl
+    chmod +x gpservice
     gpsync -f /tmp/hostfile_all gpctl =:/usr/local/greenplum-db-devel/bin/gpctl
     gpsync -f /tmp/hostfile_all gpservice =:/usr/local/greenplum-db-devel/bin/gpservice
     cd /home/gpadmin/gpdb_src/gpMgmt/bin/go-tools
