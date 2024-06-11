@@ -215,7 +215,7 @@ jobs:
               pushd gpdb_src/gpMgmt/bin/go-tools
               make build
               popd
-              tar -czf gp_binary/gp.tgz -C gpdb_src/gpMgmt/bin/go-tools gp
+              tar -czf gp_binary/gp.tgz -C gpdb_src/gpMgmt/bin/go-tools gpctl/gpctl gpservice/gpservice
 
     - in_parallel:
         steps:
