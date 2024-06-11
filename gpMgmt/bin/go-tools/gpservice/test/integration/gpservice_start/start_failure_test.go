@@ -12,7 +12,7 @@ func TestStartFailWithoutConfig(t *testing.T) {
 	t.Run("starting services without configuration file will fail", func(t *testing.T) {
 		_ = os.RemoveAll(testutils.DefaultConfigurationFile)
 		expectedOut := []string{
-			"could not open config file",
+			"could not open service config file",
 			"no such file or directory",
 		}
 		// start services
@@ -37,7 +37,7 @@ func TestStartFailWithoutConfig(t *testing.T) {
 		expectedOut := "failed to start hub service"
 
 		// start hub
-		result, err := testutils.RunStart("hub")
+		result, err := testutils.RunStart("--hub")
 		if err == nil {
 			t.Errorf("\nExpected error Got: %#v", err)
 		}
@@ -52,11 +52,14 @@ func TestStartFailWithoutConfig(t *testing.T) {
 
 	t.Run("starting hub without certificates", func(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
-		_ = testutils.CpCfgWithoutCertificates(configCopy)
+		err := testutils.CpCfgWithoutCertificates(configCopy)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 		expectedOut := "error while loading server certificate"
 
-		result, err := testutils.RunStart("hub", "--config-file", configCopy)
+		result, err := testutils.RunStart("--hub", "--config-file", configCopy)
 		if err == nil {
 			t.Errorf("\nExpected error Got: %#v", err)
 		}
@@ -76,7 +79,7 @@ func TestStartFailWithoutConfig(t *testing.T) {
 		expectedOut := "error while loading server certificate"
 
 		// start agents
-		result, err := testutils.RunStart("agents", "--config-file", configCopy)
+		result, err := testutils.RunStart("--agent", "--config-file", configCopy)
 		if err == nil {
 			t.Errorf("\nExpected error Got: %#v", err)
 		}
@@ -117,28 +120,28 @@ func TestStartGlobalFlagsFailures(t *testing.T) {
 		{
 			name: "starting agents without starting hub will fail",
 			cliParams: []string{
-				"agents",
+				"--agent",
 			},
 			expectedOut: "could not connect to hub",
 		},
 		{
 			name: "starting services with no value for --config-file will fail",
 			cliParams: []string{
-				"services", "--config-file",
+				"--config-file",
 			},
 			expectedOut: "flag needs an argument: --config-file",
 		},
 		{
 			name: "starting services with non-existing file for --config-file will fail",
 			cliParams: []string{
-				"services", "--config-file", "file",
+				"--config-file", "file",
 			},
 			expectedOut: "no such file or directory",
 		},
 		{
 			name: "starting services with empty string for --config-file will fail",
 			cliParams: []string{
-				"services", "--config-file", "",
+				"--config-file", "",
 			},
 			expectedOut: "no such file or directory",
 		},
@@ -161,6 +164,6 @@ func TestStartGlobalFlagsFailures(t *testing.T) {
 			}
 
 		})
-		_, _ = testutils.RunStop("services")
+		_, _ = testutils.RunStop()
 	}
 }

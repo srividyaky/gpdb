@@ -6,20 +6,20 @@ import (
 	"testing"
 
 	"github.com/greenplum-db/gpdb/gpservice/test/integration/testutils"
-	//"github.com/greenplum-db/gpdb/gp/test/integration/testutils"
 )
 
 func TestStopFailsWithoutSvcRunning(t *testing.T) {
+
 	t.Run("stop agents fails when hub is not running", func(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
 		_, _ = testutils.RunStart()
-		_, _ = testutils.RunStop("hub")
+		_, _ = testutils.RunStop("--hub")
 
 		expectedOut := []string{
 			"error stopping agent service", "could not connect to hub",
 		}
 
-		result, err := testutils.RunStop("agents")
+		result, err := testutils.RunStop("--agent")
 		if err == nil {
 			t.Errorf("\nExpected error Got: %#v", err)
 		}
@@ -37,7 +37,7 @@ func TestStopFailsWithoutSvcRunning(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
 		expectedOut := "could not connect to hub"
 
-		result, err := testutils.RunStop("services")
+		result, err := testutils.RunStop()
 		if err == nil {
 			t.Errorf("\nExpected error Got: %#v", err)
 		}
@@ -54,7 +54,7 @@ func TestStopFailsWithoutSvcRunning(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
 
 		expectedOut := "could not connect to hub"
-		result, err := testutils.RunStop("hub")
+		result, err := testutils.RunStop("--hub")
 		if err == nil {
 			t.Errorf("\nExpected error Got: %#v", err)
 		}
@@ -70,7 +70,7 @@ func TestStopFailsWithoutSvcRunning(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
 
 		expectedOut := "could not connect to hub"
-		result, err := testutils.RunStop("agents")
+		result, err := testutils.RunStop("--agent")
 		if err == nil {
 			t.Errorf("\nExpected error Got: %#v", err)
 		}
@@ -92,34 +92,34 @@ func TestStopFailureWithoutConfig(t *testing.T) {
 		{
 			name: "stop services fails when service configuration file is not present",
 			cliParams: []string{
-				"services",
+				"",
 			},
 			expectedOut: []string{
-				"could not open config file", "no such file or directory",
+				"could not open service config file", "no such file or directory",
 			},
 		},
 		{
 			name: "stop hub fails when service configuration file is not present",
 			cliParams: []string{
-				"hub",
+				"--hub",
 			},
 			expectedOut: []string{
-				"could not open config file", "no such file or directory",
+				"could not open service config file", "no such file or directory",
 			},
 		},
 		{
 			name: "stop agents fails when service configuration file is not present",
 			cliParams: []string{
-				"agents",
+				"--agent",
 			},
 			expectedOut: []string{
-				"could not open config file", "no such file or directory",
+				"could not open service config file", "no such file or directory",
 			},
 		},
 	}
 	for _, tc := range TestCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, _ = testutils.RunStart("services")
+			_, _ = testutils.RunStart()
 			_ = testutils.CopyFile(testutils.DefaultConfigurationFile, "/tmp/config.conf")
 			_ = os.RemoveAll(testutils.DefaultConfigurationFile)
 
@@ -135,7 +135,7 @@ func TestStopFailureWithoutConfig(t *testing.T) {
 					t.Errorf("\nExpected string: %#v \nNot found in: %#v", item, result.OutputMsg)
 				}
 			}
-			_, _ = testutils.RunStop("services", "--config-file", "/tmp/config.conf")
+			_, _ = testutils.RunStop("--config-file", "/tmp/config.conf")
 		})
 	}
 }
@@ -149,35 +149,35 @@ func TestStopFailsWithoutCertificates(t *testing.T) {
 		{
 			name: "stop services fails when certificates are not present",
 			cliParams: []string{
-				"services", "--config-file", configCopy,
+				"--config-file", configCopy,
 			},
 			expectedOut: []string{
-				"could not connect to hub",
+				"error while loading server certificate",
 			},
 		},
 		{
 			name: "stop hub fails when certificates are not present",
 			cliParams: []string{
-				"hub", "--config-file", configCopy,
+				"--hub", "--config-file", configCopy,
 			},
 			expectedOut: []string{
-				"could not connect to hub",
+				"error while loading server certificate",
 			},
 		},
 		{
 			name: "stop agents fails when certificates are not present",
 			cliParams: []string{
-				"agents", "--config-file", configCopy,
+				"--agent", "--config-file", configCopy,
 			},
 			expectedOut: []string{
-				"error stopping agent service",
+				"error while loading server certificate",
 			},
 		},
 	}
 	for _, tc := range TestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			testutils.InitService(*hostfile, testutils.CertificateParams)
-			_, _ = testutils.RunStart("services")
+			_, _ = testutils.RunStart()
 			_ = testutils.CpCfgWithoutCertificates(configCopy)
 
 			result, err := testutils.RunStop(tc.cliParams...)
@@ -192,7 +192,7 @@ func TestStopFailsWithoutCertificates(t *testing.T) {
 					t.Errorf("\nExpected string: %#v \nNot found in: %#v", item, result.OutputMsg)
 				}
 			}
-			_, _ = testutils.RunStop("services")
+			_, _ = testutils.RunStop()
 		})
 	}
 }
@@ -206,7 +206,7 @@ func TestStopFailsWithInvalidOptions(t *testing.T) {
 		{
 			name: "stop services with no value for --config-file will fail",
 			cliParams: []string{
-				"services", "--config-file",
+				"--config-file",
 			},
 			expectedOut: []string{
 				"flag needs an argument: --config-file",
@@ -215,7 +215,7 @@ func TestStopFailsWithInvalidOptions(t *testing.T) {
 		{
 			name: "stop services with non-existing file for --config-file will fail",
 			cliParams: []string{
-				"services", "--config-file", "file",
+				"--config-file", "file",
 			},
 			expectedOut: []string{
 				"no such file or directory",
@@ -235,7 +235,7 @@ func TestStopFailsWithInvalidOptions(t *testing.T) {
 	for _, tc := range TestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			testutils.InitService(*hostfile, testutils.CertificateParams)
-			_, _ = testutils.RunStart("services")
+			_, _ = testutils.RunStart()
 
 			result, err := testutils.RunStop(tc.cliParams...)
 			if err == nil {
@@ -249,7 +249,7 @@ func TestStopFailsWithInvalidOptions(t *testing.T) {
 					t.Errorf("\nExpected string: %#v \nNot found in: %#v", item, result.OutputMsg)
 				}
 			}
-			_, _ = testutils.RunStop("services")
+			_, _ = testutils.RunStop()
 		})
 	}
 }

@@ -288,53 +288,16 @@ func runCmdWithUserInput(cmd Command, userinput string) (CmdResult, error) {
 }
 
 func RunInitClusterwithUserInput(userinput string, params ...string) (CmdResult, error) {
-	params = append([]string{"init", "cluster"}, params...)
+	params = append([]string{"init"}, params...)
 	genCmd := Command{
-		cmdStr: constants.DefaultServiceName,
-		args:   params,
-	}
-	return runCmdWithUserInput(genCmd, userinput)
-}
-
-func runCmdWithUserInput(cmd Command, userinput string) (CmdResult, error) {
-	var cmdObj *exec.Cmd
-	if cmd.host == "" || cmd.host == DefaultHost {
-		cmdObj = exec.Command(cmd.cmdStr, cmd.args...)
-	} else {
-		subCmd := exec.Command(cmd.cmdStr, cmd.args...)
-		cmdObj = exec.Command("ssh", cmd.host, subCmd.String())
-	}
-
-	stdin, _ := cmdObj.StdinPipe()
-	go func() {
-		defer stdin.Close()
-		_, err := io.WriteString(stdin, userinput)
-		if err != nil {
-			return
-		}
-	}()
-
-	out, err := cmdObj.CombinedOutput()
-	result := CmdResult{
-		OutputMsg: string(out),
-		ExitCode:  cmdObj.ProcessState.ExitCode(),
-	}
-
-	return result, err
-}
-
-func RunInitClusterwithUserInput(userinput string, params ...string) (CmdResult, error) {
-	params = append([]string{"init", "cluster"}, params...)
-	genCmd := Command{
-		cmdStr: constants.DefaultServiceName,
+		cmdStr: constants.DefaultGpCtlName,
 		args:   params,
 	}
 	return runCmdWithUserInput(genCmd, userinput)
 }
 
 func GetServiceDetails(p platform.Platform) (string, string, string) {
-	//serviceDir := fmt.Sprintf(p.GetDefaultServiceDir(), os.Getenv("USER"))
-	serviceDir := p.GetDefaultServiceDir()
+	serviceDir := p.(platform.GpPlatform).ServiceDir
 	serviceExt := p.(platform.GpPlatform).ServiceExt
 	serviceCmd := p.(platform.GpPlatform).ServiceCmd
 
@@ -358,7 +321,8 @@ func DisableandDeleteServiceFiles(p platform.Platform) {
 	serviceDir, serviceExt, serviceCmd := GetServiceDetails(p)
 	filesToUnload := GetSvcFiles(serviceDir, serviceExt)
 	for _, filePath := range filesToUnload {
-		UnloadSvcFile(serviceCmd, filepath.Base(filePath))
+		fullPath := filepath.Join(serviceDir, filepath.Base(filePath))
+		UnloadSvcFile(serviceCmd, fullPath)
 		_ = os.RemoveAll(filePath)
 	}
 }

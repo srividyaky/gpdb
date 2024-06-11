@@ -357,7 +357,7 @@ jobs:
                       - name: gp_binary
                       - name: ccp-image
                     params:
-                      utility: start
+                      utility: gpservice_start
                     run:
                       path: gpdb_src/gpMgmt/bin/go-tools/ci/scripts/run_integration_tests.bash
                   image: ccp-image
@@ -383,7 +383,7 @@ jobs:
                       - name: gp_binary
                       - name: ccp-image
                     params:
-                      utility: start
+                      utility: gpservice_start
                     run:
                       path: gpdb_src/gpMgmt/bin/go-tools/ci/scripts/run_integration_tests.bash
                   image: ccp-image
@@ -429,7 +429,7 @@ jobs:
                       - name: gp_binary
                       - name: ccp-image
                     params:
-                      utility: status
+                      utility: gpservice_status
                     run:
                       path: gpdb_src/gpMgmt/bin/go-tools/ci/scripts/run_integration_tests.bash
                   image: ccp-image
@@ -455,7 +455,7 @@ jobs:
                       - name: gp_binary
                       - name: ccp-image
                     params:
-                      utility: status
+                      utility: gpservice_status
                     run:
                       path: gpdb_src/gpMgmt/bin/go-tools/ci/scripts/run_integration_tests.bash
                   image: ccp-image
@@ -465,7 +465,7 @@ jobs:
                     <<: *set_failed   
 
 
-  - name: integration_tests_stop
+  - name: integration_tests_gpservice_stop
     plan:
       - get: gp_binary
         resource: gp_binary
@@ -502,7 +502,7 @@ jobs:
                       - name: gp_binary
                       - name: ccp-image
                     params:
-                      utility: stop
+                      utility: gpservice_stop
                     run:
                       path: gpdb_src/gpMgmt/bin/go-tools/ci/scripts/run_integration_tests.bash
                   image: ccp-image
@@ -528,7 +528,7 @@ jobs:
                       - name: gp_binary
                       - name: ccp-image
                     params:
-                      utility: stop
+                      utility: gpservice_stop
                     run:
                       path: gpdb_src/gpMgmt/bin/go-tools/ci/scripts/run_integration_tests.bash
                   image: ccp-image

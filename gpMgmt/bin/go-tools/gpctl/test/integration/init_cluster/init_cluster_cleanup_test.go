@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/greenplum-db/gpdb/gp/cli"
-	"github.com/greenplum-db/gpdb/gp/test/integration/testutils"
+	"github.com/greenplum-db/gpdb/gpctl/cli"
+	"github.com/greenplum-db/gpdb/gpservice/test/integration/testutils"
 )
 
 func SimulateError(dirDeleted chan bool, pSegPath string, host string, t *testing.T) {
@@ -81,7 +81,7 @@ func TestInitClusterCleanup(t *testing.T) {
 		}
 
 		//Check if we got a message to rollback
-		expectedOut := "[INFO]:-Please run gp init cluster --clean to rollback"
+		expectedOut := "[INFO]:-Please run gpctl init --clean to rollback"
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
@@ -138,7 +138,7 @@ func TestInitClusterCleanup(t *testing.T) {
 		}
 
 		//Check if we got a message to rollback
-		expectedOut := "[INFO]:-Please run gp init cluster --clean to rollback"
+		expectedOut := "[INFO]:-Please run gpctl init --clean to rollback"
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
@@ -198,7 +198,7 @@ func TestInitClusterCleanup(t *testing.T) {
 		}
 
 		//Check if we got a message to rollback
-		expectedOut := "[INFO]:-Please run gp init cluster --clean to rollback"
+		expectedOut := "[INFO]:-Please run gpctl init --clean to rollback"
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
@@ -264,7 +264,7 @@ func TestInitClusterCleanup(t *testing.T) {
 		}
 
 		//Check if we got a message to rollback
-		expectedOut := "[INFO]:-Please run gp init cluster --clean to rollback"
+		expectedOut := "[INFO]:-Please run gpctl init --clean to rollback"
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
@@ -397,7 +397,7 @@ func TestInitClusterCleanup(t *testing.T) {
 		}
 
 		//Check if we got a message to rollback
-		expectedOut := "[INFO]:-Please run gp init cluster --clean to rollback"
+		expectedOut := "[INFO]:-Please run gpctl init --clean to rollback"
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
@@ -407,7 +407,7 @@ func TestInitClusterCleanup(t *testing.T) {
 			t.Fatalf("unexpected error: %s, %v", result.OutputMsg, err)
 		}
 
-		expectedOut = "[ERROR]:-failed to initialize the cluster: gpinitsystem has failed previously. Run gp init cluster --clean before creating cluster again"
+		expectedOut = "[ERROR]:-failed to initialize the cluster: gpinitsystem has failed previously. Run gpctl init --clean before creating cluster again"
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
 		}
@@ -463,7 +463,7 @@ func TestInitClusterCleanup(t *testing.T) {
 		}
 
 		//Check if we got a message to rollback
-		expectedOut := "[INFO]:-Please run gp init cluster --clean to rollback"
+		expectedOut := "[INFO]:-Please run gpctl init --clean to rollback"
 		if !strings.Contains(result.OutputMsg, expectedOut) {
 			t.Fatalf("got %q, want %q", result.OutputMsg, expectedOut)
 		}

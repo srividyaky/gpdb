@@ -21,7 +21,7 @@ unit:
 # You can override this from the command line to run tests for specific utility.
 # For example, to run start related tests: make integration UTILITY=start
 # NOTE: If hostfile is not provided, by default it will run tests on localhost.
-UTILITY = ''
+#UTILITY = ''
 integration: TEST_PACKAGES := $(shell go list ./test/integration/... | grep -E $(UTILITY))
 integration:
 	go test -v -count=1 $(TEST_PACKAGES) -timeout 0 -p 1 -args -hostfile=$(FILE)

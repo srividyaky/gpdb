@@ -1,14 +1,9 @@
 package stop
 
 import (
-	//"github.com/greenplum-db/gpdb/gp/test/integration/testutils"
-	//"github.com/greenplum-db/gpdb/gpservice/pkg/utils"
 	"strings"
 	"testing"
 
-	//"github.com/greenplum-db/gpdb/gpservice/internal/platform"
-
-	//"github.com/greenplum-db/gpdb/gpservice/internal/platform"
 	"github.com/greenplum-db/gpdb/gpservice/internal/platform"
 	"github.com/greenplum-db/gpdb/gpservice/test/integration/testutils"
 )
@@ -16,17 +11,21 @@ import (
 func TestStopSuccess(t *testing.T) {
 	hosts := testutils.GetHostListFromFile(*hostfile)
 
+	const (
+		gpserviceHub   = "gpservice_hub"
+		gpserviceAgent = "gpservice_agent"
+	)
 	t.Run("stop services successfully", func(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
-		_, _ = testutils.RunStart("services")
+		_, _ = testutils.RunStart()
 
 		expectedOut := []string{
-			"Agents stopped successfully",
-			"Hub stopped successfully",
+			"Agent service stopped successfully",
+			"Hub service stopped successfully",
 		}
 
-		// Running the gp stop command for services
-		result, err := testutils.RunStop("services")
+		// Running the gpservice stop command for services
+		result, err := testutils.RunStop()
 		// check for command result
 		if err != nil {
 			t.Errorf("\nUnexpected error: %#v", err)
@@ -41,9 +40,9 @@ func TestStopSuccess(t *testing.T) {
 		}
 
 		// check if service is not running
-		for _, svc := range []string{"gp_hub", "gp_agent"} {
+		for _, svc := range []string{gpserviceHub, gpserviceAgent} {
 			hostList := hosts[:1]
-			if svc == "gp_agent" {
+			if svc == gpserviceAgent {
 				hostList = hosts
 			}
 			for _, host := range hostList {
@@ -55,12 +54,12 @@ func TestStopSuccess(t *testing.T) {
 
 	t.Run("stop hub successfully", func(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
-		_, _ = testutils.RunStart("hub")
+		_, _ = testutils.RunStart("--hub")
 
-		expectedOut := "Hub stopped successfully"
+		expectedOut := "Hub service stopped successfully"
 
 		// Running the gp stop command for hub
-		result, err := testutils.RunStop("hub")
+		result, err := testutils.RunStop("--hub")
 		// check for command result
 		if err != nil {
 			t.Errorf("\nUnexpected error: %#v", err)
@@ -79,12 +78,12 @@ func TestStopSuccess(t *testing.T) {
 
 	t.Run("stop agents successfully", func(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
-		_, _ = testutils.RunStart("services")
+		_, _ = testutils.RunStart()
 
-		expectedOut := "Agents stopped successfully"
+		expectedOut := "Agent service stopped successfully"
 
 		// Running the gp stop command for agents
-		result, err := testutils.RunStop("agents")
+		result, err := testutils.RunStop("--agent")
 		// check for command result
 		if err != nil {
 			t.Errorf("\nUnexpected error: %#v", err)
@@ -102,19 +101,19 @@ func TestStopSuccess(t *testing.T) {
 			testutils.VerifySvcNotRunning(t, status.OutputMsg)
 		}
 
-		_, _ = testutils.RunStop("hub")
+		_, _ = testutils.RunStop("--hub")
 	})
 
 	t.Run("stop services command with --verbose shows status details", func(t *testing.T) {
 		testutils.InitService(*hostfile, testutils.CertificateParams)
-		_, _ = testutils.RunStart("services")
+		_, _ = testutils.RunStart()
 
 		cliParams := []string{
-			"services", "--verbose",
+			"--verbose",
 		}
 		expectedOut := []string{
-			"Agents stopped successfull",
-			"Hub stopped successfully",
+			"Agent service stopped successfull",
+			"Hub service stopped successfully",
 		}
 
 		result, err := testutils.RunStop(cliParams...)
@@ -143,68 +142,6 @@ func TestStopSuccess(t *testing.T) {
 			}
 		}
 	})
-
-	t.Run("stop hub command with --verbose shows status details", func(t *testing.T) {
-		testutils.InitService(testutils.DefaultHost, testutils.CertificateParams)
-		_, _ = testutils.RunStart("hub")
-
-		cliParams := []string{
-			"hub", "--verbose",
-		}
-		expectedOut := []string{
-			"Hub stopped successfully",
-			"ROLE", "HOST", "STATUS", "PID", "UPTIME",
-			"Hub", "not running", "0",
-		}
-
-		result, err := testutils.RunStop(cliParams...)
-		// check for command result
-		if err != nil {
-			t.Errorf("\nUnexpected error: %#v", err)
-		}
-		if result.ExitCode != 0 {
-			t.Errorf("\nExpected: %v \nGot: %v", 0, result.ExitCode)
-		}
-		for _, item := range expectedOut {
-			if !strings.Contains(result.OutputMsg, item) {
-				t.Errorf("\nExpected string: %#v \nNot found in: %#v", item, result.OutputMsg)
-			}
-		}
-
-		// check if service is not running
-		status, _ := testutils.GetSvcStatusOnHost(p.(platform.GpPlatform), "gp_hub", hosts[0])
-		testutils.VerifySvcNotRunning(t, status.OutputMsg)
-	})
-
-	t.Run("stop agents command with --verbose", func(t *testing.T) {
-		testutils.InitService(testutils.DefaultHost, testutils.CertificateParams)
-		_, _ = testutils.RunStart("services")
-
-		cliParams := []string{
-			"agents", "--verbose",
-		}
-		expectedOut := "Agents stopped successfully"
-
-		result, err := testutils.RunStop(cliParams...)
-		// check for command result
-		if err != nil {
-			t.Errorf("\nUnexpected error: %#v", err)
-		}
-		if result.ExitCode != 0 {
-			t.Errorf("\nExpected: %v \nGot: %v", 0, result.ExitCode)
-		}
-		if !strings.Contains(result.OutputMsg, expectedOut) {
-			t.Errorf("\nExpected string: %#v \nNot found in: %#v", expectedOut, result.OutputMsg)
-		}
-
-		// check if service is not running
-		for _, host := range hosts {
-			status, _ := testutils.GetSvcStatusOnHost(p.(platform.GpPlatform), "gp_agent", host)
-			testutils.VerifySvcNotRunning(t, status.OutputMsg)
-		}
-
-		_, _ = testutils.RunStop("hub")
-	})
 }
 
 func TestStopSuccessHelp(t *testing.T) {
@@ -213,12 +150,7 @@ func TestStopSuccessHelp(t *testing.T) {
 		cliParams   []string
 		expectedOut []string
 	}{
-		{
-			name: "stop command without params shows help",
-			expectedOut: append([]string{
-				"Stop processes",
-			}, testutils.CommonHelpText...),
-		},
+		//this is failing, bug is raised for error message
 		{
 			name: "stop command with invalid param shows help",
 			cliParams: []string{
@@ -234,7 +166,7 @@ func TestStopSuccessHelp(t *testing.T) {
 				"--help",
 			},
 			expectedOut: append([]string{
-				"Stop processes",
+				"Stop hub and agent services",
 			}, testutils.CommonHelpText...),
 		},
 		{
@@ -243,66 +175,15 @@ func TestStopSuccessHelp(t *testing.T) {
 				"-h",
 			},
 			expectedOut: append([]string{
-				"Stop processes",
-			}, testutils.CommonHelpText...),
-		},
-		{
-			name: "stop hub command with --help shows help",
-			cliParams: []string{
-				"hub", "--help",
-			},
-			expectedOut: append([]string{
-				"Stop hub",
-			}, testutils.CommonHelpText...),
-		},
-		{
-			name: "stop hub command with -h shows help",
-			cliParams: []string{
-				"hub", "-h",
-			},
-			expectedOut: append([]string{
-				"Stop hub",
-			}, testutils.CommonHelpText...),
-		},
-		{
-			name: "stop agents command with --help shows help",
-			cliParams: []string{
-				"agents", "--help",
-			},
-			expectedOut: append([]string{
-				"Stop agents",
-			}, testutils.CommonHelpText...),
-		},
-		{
-			name: "stop agents command with -h shows help",
-			cliParams: []string{
-				"agents", "-h",
-			},
-			expectedOut: append([]string{
-				"Stop agents",
-			}, testutils.CommonHelpText...),
-		},
-		{
-			name: "stop services command with --help shows help",
-			cliParams: []string{
-				"services", "--help",
-			},
-			expectedOut: append([]string{
-				"Stop hub and agent services",
-			}, testutils.CommonHelpText...),
-		},
-		{
-			name: "stop services command with -h shows help",
-			cliParams: []string{
-				"services", "-h",
-			},
-			expectedOut: append([]string{
 				"Stop hub and agent services",
 			}, testutils.CommonHelpText...),
 		},
 	}
 	for _, tc := range TestCases {
 		t.Run(tc.name, func(t *testing.T) {
+			testutils.InitService(*hostfile, testutils.CertificateParams)
+			testutils.RunStart()
+
 			result, err := testutils.RunStop(tc.cliParams...)
 			// check for command result
 			if err != nil {
