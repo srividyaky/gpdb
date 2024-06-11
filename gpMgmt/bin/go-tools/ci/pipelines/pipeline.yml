@@ -163,10 +163,9 @@ groups:
       - build
       - unit_tests
       - integration_tests_init_cluster
-      - integration_tests_start
-      - integration_tests_status
-      - integration_tests_stop
-      - integration_tests_delete
+      - integration_tests_gpservice_start
+      - integration_tests_gpservice_status
+      - integration_tests_gpservice_stop
 
 
 jobs:
@@ -321,7 +320,7 @@ jobs:
                   ensure:
                     <<: *set_failed
 
-  - name: integration_tests_start
+  - name: integration_tests_gpservice_start
     plan:
       - get: gp_binary
         resource: gp_binary
@@ -393,7 +392,7 @@ jobs:
                   ensure:
                     <<: *set_failed                  
 
-  - name: integration_tests_status
+  - name: integration_tests_gpservice_status
     plan:
       - get: gp_binary
         resource: gp_binary
