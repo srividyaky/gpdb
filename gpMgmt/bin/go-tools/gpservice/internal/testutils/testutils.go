@@ -85,6 +85,18 @@ func (p *MockPlatform) GetStartHubCommand(serviceName string) *exec.Cmd {
 func (p *MockPlatform) GetStartAgentCommandString(serviceName string) []string {
 	return nil
 }
+func (p *MockPlatform) RemoveHubService(serviceName string) error {
+	return nil
+}
+func (p *MockPlatform) RemoveAgentService(gpHome string, serviceName string, hostList []string) error {
+	return nil
+}
+func (p *MockPlatform) RemoveHubServiceFile(serviceName string) error {
+	return nil
+}
+func (p *MockPlatform) RemoveAgentServiceFile(gpHome string, serviceName string, hostList []string) error {
+	return nil
+}
 func (p *MockPlatform) ParseServiceStatusMessage(message string) idl.ServiceStatus {
 	return idl.ServiceStatus{Status: p.RetStatus.Status, Pid: p.RetStatus.Pid, Uptime: p.RetStatus.Uptime}
 }
@@ -359,13 +371,13 @@ func CheckGRPCServerRunning(t *testing.T, port int) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	defer conn.Close()
-	
+
 	client := healthpb.NewHealthClient(conn)
 	resp, err := client.Check(context.Background(), &healthpb.HealthCheckRequest{})
 	if err != nil {
 		t.Fatalf("unexepected error: %v", err)
 	}
-	
+
 	if resp.Status != healthpb.HealthCheckResponse_SERVING {
 		t.Fatalf("gRPC server not running, state: %s", resp.Status)
 	}

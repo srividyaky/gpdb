@@ -32,6 +32,7 @@ type SystemFunctions struct {
 	Getuid             func() int
 	Stat               func(name string) (os.FileInfo, error)
 	Getgid             func() int
+	Remove             func(name string) error
 	RemoveAll          func(path string) error
 	ReadFile           func(name string) ([]byte, error)
 	GetHostName        func() (name string, err error)
@@ -50,6 +51,7 @@ func InitializeSystemFunctions() *SystemFunctions {
 		Getuid:             os.Geteuid,
 		Stat:               os.Stat,
 		Getgid:             os.Getgid,
+		Remove:             os.Remove,
 		RemoveAll:          os.RemoveAll,
 		ReadFile:           os.ReadFile,
 		GetHostName:        os.Hostname,

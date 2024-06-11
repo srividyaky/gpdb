@@ -3,6 +3,7 @@ package gpservice_config
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/greenplum-db/gp-common-go-libs/gplog"
 	"net"
 	"os"
 	"strconv"
@@ -49,6 +50,19 @@ func (conf *Config) Write(filepath string) error {
 		return err
 	}
 
+	return nil
+}
+
+func (conf *Config) Remove(configFilepath string) error {
+	gpsshCmd := &greenplum.GpSSH{
+		Hostnames: conf.Hostnames,
+		Command:   fmt.Sprintf("rm %s", configFilepath),
+	}
+	_, err := utils.RunGpSourcedCommand(gpsshCmd, conf.GpHome)
+	if err != nil {
+		return fmt.Errorf("failed to delete service configuration file %s: %w", configFilepath, err)
+	}
+	gplog.Info("Successfully deleted service configuration file %s", configFilepath)
 	return nil
 }
 
@@ -119,6 +133,6 @@ func SetConnectToHub(hubClient *mock_idl.MockHubClient) {
 	}
 }
 
-func ResetConnectToHub(){
+func ResetConnectToHub() {
 	ConnectToHub = connectToHubFunc
 }

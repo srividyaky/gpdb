@@ -13,6 +13,10 @@ import (
 	grpcStatus "google.golang.org/grpc/status"
 )
 
+var (
+	StopServices = StopServicesFunc
+)
+
 func StopCmd() *cobra.Command {
 	var stopHub, stopAgent bool
 
@@ -76,7 +80,7 @@ func stopAgentService(conf *gpservice_config.Config) error {
 	return nil
 }
 
-func StopServices(conf *gpservice_config.Config) error {
+func StopServicesFunc(conf *gpservice_config.Config) error {
 	err := stopAgentService(conf)
 	if err != nil {
 		return err

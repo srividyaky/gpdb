@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	platform    = GetPlatform()
+	platform = GetPlatform()
 )
 
 type Server struct {
@@ -45,8 +45,8 @@ type Connection struct {
 
 func New(conf *Config) *Server {
 	h := &Server{
-		Config:     conf,
-		finish:     make(chan struct{}, 1),
+		Config: conf,
+		finish: make(chan struct{}, 1),
 	}
 	return h
 }
@@ -75,7 +75,7 @@ func (s *Server) Start() error {
 	s.grpcServer = grpcServer
 	s.listener = listener
 	s.mutex.Unlock()
-	
+
 	healthcheck := health.NewServer()
 	healthgrpc.RegisterHealthServer(grpcServer, healthcheck)
 
@@ -279,4 +279,12 @@ func getConnForHosts(conns []*Connection, hostnames []string) []*Connection {
 	}
 
 	return result
+}
+
+func SetPlatform(p Platform) {
+	platform = p
+}
+
+func ResetPlatform() {
+	platform = GetPlatform()
 }
