@@ -7717,7 +7717,7 @@ StartupXLOG(void)
 						WalSndWakeup();
 				}
 
-				if (gp_pause_on_restore_point_replay)
+				if (gp_pause_on_restore_point_replay && strcmp(gp_pause_on_restore_point_replay, "") != 0)
 					pauseRecoveryOnRestorePoint(xlogreader);
 
 				/* Exit loop if we reached inclusive recovery target */
