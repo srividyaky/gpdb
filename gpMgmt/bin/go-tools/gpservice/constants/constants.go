@@ -10,6 +10,7 @@ const (
 	ConfigFileName     = "gpservice.conf"
 	PlatformDarwin     = "darwin"
 	PlatformLinux      = "linux"
+	DefaultGpCtlName   = "gpctl"
 )
 
 const (
