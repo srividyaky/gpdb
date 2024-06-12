@@ -166,6 +166,7 @@ groups:
       - integration_tests_gpservice_start
       - integration_tests_gpservice_status
       - integration_tests_gpservice_stop
+      - integration_tests_delete
 
 
 jobs:
