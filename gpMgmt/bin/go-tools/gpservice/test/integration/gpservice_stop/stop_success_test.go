@@ -182,7 +182,7 @@ func TestStopSuccessHelp(t *testing.T) {
 	for _, tc := range TestCases {
 		t.Run(tc.name, func(t *testing.T) {
 			testutils.InitService(*hostfile, testutils.CertificateParams)
-			testutils.RunStart()
+			_, _ = testutils.RunStart()
 
 			result, err := testutils.RunStop(tc.cliParams...)
 			// check for command result
