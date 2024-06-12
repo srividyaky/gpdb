@@ -441,6 +441,13 @@ drop table t4_12146;
 
 reset allow_system_table_mods;
 
+-- test case for Github Issue 17639
+create type cmptype1_17639 as ( a int, b int);
+create table cmptable1_17639(id int, item1 cmptype1_17639) distributed by (id);
+create type cmptype2_17639 as ( a int, b int);
+create table cmptable2_17639(id int, item2 cmptype2_17639) distributed by (id);
+explain select * from cmptable1_17639 where (item1, item1) IN (select item2, item2 from cmptable2_17639);
+
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;
@@ -448,4 +455,8 @@ drop table if exists bfv_planner_foo;
 drop table if exists testmedian;
 drop table if exists bfv_planner_t1;
 drop table if exists bfv_planner_t2;
+drop table cmptable1_17639;
+drop table cmptable2_17639;
+drop type cmptype1_17639;
+drop type cmptype2_17639;
 -- end_ignore

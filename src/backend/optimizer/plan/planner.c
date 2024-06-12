@@ -63,6 +63,7 @@
 #include "partitioning/partdesc.h"
 #include "rewrite/rewriteManip.h"
 #include "storage/dsm_impl.h"
+#include "utils/builtins.h"
 #include "utils/lsyscache.h"
 #include "utils/rel.h"
 #include "utils/selfuncs.h"
@@ -5782,6 +5783,14 @@ create_scatter_path(PlannerInfo *root, List *scatterClause, Path *path)
 			Oid			opfamily;
 
 			opfamily = cdb_default_distribution_opfamily_for_type(exprType(expr));
+			if (!OidIsValid(opfamily))
+			{
+				ereport(ERROR,
+						(errcode(ERRCODE_UNDEFINED_OBJECT),
+						 errmsg("data type %s in scatter-clause has no default operator class for hash access method",
+								format_type_be(exprType(expr))),
+						 errhint("You must specify an operator class for the type or define a default operator class for the type.")));
+			}
 			opfamilies = lappend_oid(opfamilies, opfamily);
 			sortrefs = lappend_int(sortrefs, 0);
 		}

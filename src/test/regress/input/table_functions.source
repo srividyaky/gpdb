@@ -1022,6 +1022,11 @@ ALTER TABLE example_r ALTER COLUMN a TYPE numeric;
 EXECUTE p6;
 DEALLOCATE p6;
 
+-- Test for Github Issue 17639
+CREATE TYPE cmptype_17639 AS ( a int, b int);
+CREATE TABLE example_17639(a cmptype_17639, b text) distributed by(b);
+explain SELECT * FROM multiset_5( TABLE( SELECT * FROM example_17639 SCATTER by a));
+
 -- =======
 -- Cleanup
 -- =======

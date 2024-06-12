@@ -3262,11 +3262,17 @@ EXECUTE p6;
 (10 rows)
 
 DEALLOCATE p6;
+-- Test for Github Issue 17639
+CREATE TYPE cmptype_17639 AS ( a int, b int);
+CREATE TABLE example_17639(a cmptype_17639, b text) distributed by(b);
+explain SELECT * FROM multiset_5( TABLE( SELECT * FROM example_17639 SCATTER by a));
+ERROR:  data type cmptype_17639 in scatter-clause has no default operator class for hash access method
+HINT:  You must specify an operator class for the type or define a default operator class for the type.
 -- =======
 -- Cleanup
 -- =======
 DROP SCHEMA table_function CASCADE;
-NOTICE:  drop cascades to 37 other objects
+NOTICE:  drop cascades to 39 other objects
 DETAIL:  drop cascades to table example
 drop cascades to table history
 drop cascades to table example_r
@@ -3304,4 +3310,6 @@ drop cascades to function project(anytable,integer)
 drop cascades to function ud_describe(internal)
 drop cascades to function ud_project(anytable)
 drop cascades to function noop_project(anytable)
+drop cascades to type cmptype_17639
+drop cascades to table example_17639
 SET search_path TO public;

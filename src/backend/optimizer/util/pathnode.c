@@ -2123,6 +2123,8 @@ create_unique_path(PlannerInfo *root, RelOptInfo *rel, Path *subpath,
 			Oid			opfamily;
 
 			opfamily = cdb_default_distribution_opfamily_for_type(exprType(expr));
+			if (!OidIsValid(opfamily))
+				return NULL;
 			opfamilies = lappend_oid(opfamilies, opfamily);
 			sortrefs = lappend_int(sortrefs, 0);
 		}

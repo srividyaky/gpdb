@@ -804,6 +804,27 @@ drop table t2_12146;
 drop table t3_12146;
 drop table t4_12146;
 reset allow_system_table_mods;
+-- test case for Github Issue 17639
+create type cmptype1_17639 as ( a int, b int);
+create table cmptable1_17639(id int, item1 cmptype1_17639) distributed by (id);
+create type cmptype2_17639 as ( a int, b int);
+create table cmptable2_17639(id int, item2 cmptype2_17639) distributed by (id);
+explain select * from cmptable1_17639 where (item1, item1) IN (select item2, item2 from cmptable2_17639);
+                                                        QUERY PLAN                                                        
+--------------------------------------------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice1; segments: 3)  (cost=30000006086.73..30000014948.60 rows=24800 width=36)
+   ->  Merge Semi Join  (cost=30000006086.73..30000014617.93 rows=8267 width=36)
+         Merge Cond: (cmptable1_17639.item1 = cmptable2_17639.item2)
+         ->  Sort  (cost=10000001357.75..10000001399.08 rows=16533 width=36)
+               Sort Key: cmptable1_17639.item1
+               ->  Seq Scan on cmptable1_17639  (cost=10000000000.00..10000000199.33 rows=16533 width=36)
+         ->  Sort  (cost=10000004728.98..10000004852.98 rows=49600 width=32)
+               Sort Key: cmptable2_17639.item2
+               ->  Broadcast Motion 3:3  (slice2; segments: 3)  (cost=10000000000.00..10000000860.67 rows=49600 width=32)
+                     ->  Seq Scan on cmptable2_17639  (cost=10000000000.00..10000000199.33 rows=16533 width=32)
+ Optimizer: Postgres-based planner
+(11 rows)
+
 -- start_ignore
 drop table if exists bfv_planner_x;
 drop table if exists testbadsql;
@@ -811,4 +832,8 @@ drop table if exists bfv_planner_foo;
 drop table if exists testmedian;
 drop table if exists bfv_planner_t1;
 drop table if exists bfv_planner_t2;
+drop table cmptable1_17639;
+drop table cmptable2_17639;
+drop type cmptype1_17639;
+drop type cmptype2_17639;
 -- end_ignore
